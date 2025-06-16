@@ -1,39 +1,42 @@
-# Configuration for SIC Evaluation 
+
+# Configuration for Preprocessing and Evaluation
 
 [paths]
-# Input path for the SIC Evaluation Dataset (relative to project root)
-batch_filepath = "data/evaluation_data/TLFS_evaluation_data_IT2.csv"
-
-# Output file for batch processing results
-output_filepath = "data/analysis_outputs/output_7.jsonl" # Changed from .csv to .jsonl
-
-# Output for processed csv:
-analysis_csv = "data/analysis_outputs/TLFS_evaluation_data_IT2_output.csv"
-
-# Output directory for analysis results (relative to project root)
-output_dir = "data/analysis_outputs"
+# Local directory where raw JSON files are stored
+local_json_dir = "/home/user/survey-assist-utils/data/json_runs"
+# GCS bucket and folder for raw JSON files
+gcs_bucket_name = "<your_bucket_location>"
+gcs_prefix = "analysis_outputs/"
+# Output for the final processed CSV
+processed_csv_output = "/home/user/survey-assist-utils/data/analysis_outputs/TLFS_evaluation_data_IT2_output.csv"
 
 [parameters]
-test_mode = true
-test_num = 2
+# Process only files created on or after this date (YYYYMMDD)
+date_since = "20250522"
+# Max number of LLM candidates to process per record
+max_candidates = 5
 
-[column_names]
-# --- Column names from the input CSV to be used for API payload ---
-payload_unique_id = "unique_id"
-payload_job_title = "soc2020_job_title"
-payload_job_description = "soc2020_job_description"
-payload_industry_description = "sic2007_employee"
-
-# --- Key columns in the SIC Evaluation Dataset input file ---
+[json_keys]
+# --- Top-level keys from the source JSON ---
 unique_id = "unique_id"
-sic_ind_occ1 = "sic_ind_occ1"         # Analysis SIC code column
-sic_ind_occ2 = "sic_ind_occ2"         # Analysis SIC code column
-sic_ind_occ3 = "sic_ind_occ3"         # Analysis SIC code column
-coding_flag = "sic_ind_code_flag"   # Analysis column for KB/CC/MC flag
+classified = "classified"
+followup = "followup"
+source_sic_code = "sic_code"
+source_sic_description = "sic_description"
+reasoning = "reasoning"
+
+# --- Nested payload keys ---
+payload_path = "request_payload"
+payload_job_title = "job_title"
+payload_job_description = "job_description"
+
+# --- Nested candidate keys ---
+candidates_path = "sic_candidates"
+candidate_sic_code = "sic_code"
+candidate_description = "sic_descriptive"
+candidate_likelihood = "likelihood"
 
 [logging]
-# Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 level = "INFO"
-# Optional: Log file path (relative to project root). If commented out, logs to console.
-file = "logs/evaluation3.log"
 format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+
