@@ -9,7 +9,21 @@ calculate_match_rate_at_n
 """
 
 from typing import Optional
+from typing import Tuple
+import json
+import os
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import seaborn as sns
+#from sklearn.metrics import confusion_matrix
+import pandas as pd
+import numpy as np
 
 # pylint: disable=too-few-public-methods
 class AlignmentEvaluator:
@@ -152,3 +166,148 @@ class LabelAccuracy:
             return 0.0
         return 100 * filtered_df["is_correct"].mean()            
 
+    def get_coverage(self, threshold: float = 0.0) -> float:
+        """
+        Calculate percentage of predictions above the given confidence threshold.
+
+        Args:
+            threshold: Minimum confidence score threshold (default: 0.0)
+
+        Returns
+        -------
+            float: Coverage as a percentage
+        """
+        return 100 * (self.df["max_score"] >= threshold).mean()
+
+
+    def get_threshold_stats(
+        self, thresholds: list[float] = None
+    ) -> pd.DataFrame:
+        """
+        Calculate accuracy and coverage across multiple thresholds.
+
+        Args:
+            thresholds: List of threshold values to evaluate (default: None)
+
+        Returns
+        -------
+            DataFrame with columns: threshold, accuracy, coverage
+        """
+        if thresholds is None:
+            thresholds = np.linspace(0, 1, 21)
+
+        stats = []
+        for threshold in thresholds:
+            stats.append(
+                {
+                    "threshold": threshold,
+                    "accuracy": self.get_accuracy(threshold),
+                    "coverage": self.get_coverage(threshold),
+                }
+            )
+
+        return pd.DataFrame(stats)
+
+
+
+    def plot_threshold_curves(
+        self,
+        thresholds: list[float] = None,
+        figsize: Tuple[int, int] = (10, 6),
+    ) -> None:
+        """
+        Plot accuracy and coverage curves against confidence threshold.
+
+        Args:
+            thresholds: List of threshold values to evaluate (default: Non
+            ))
+        """
+        stats_df = self.get_threshold_stats(thresholds)
+
+        plt.figure(figsize=figsize)
+        plt.plot(
+            stats_df["threshold"],
+            stats_df["coverage"],
+            label="Coverage",
+            color="blue",
+        )
+        plt.plot(
+            stats_df["threshold"],
+            stats_df["accuracy"],
+            label="Accuracy",
+            color="orange",
+        )
+
+        plt.xlabel("Confidence threshold")
+        plt.ylabel("Percentage")
+        plt.grid(True)
+        plt.legend()
+        plt.title("Coverage and Accuracy vs Confidence Threshold")
+        plt.tight_layout()
+        plt.show()
+
+
+    def get_summary_stats(self) -> Dict:
+        """
+        Get summary statistics for the classification results.
+
+        Returns
+        -------
+            Dictionary containing various summary statistics
+        """
+        return {
+            "total_samples": len(self.df),
+            "overall_accuracy": self.get_accuracy(),
+            "accuracy_above_0.50": self.get_accuracy(0.5),
+            "accuracy_above_0.60": self.get_accuracy(0.6),
+            "accuracy_above_0.70": self.get_accuracy(0.7),
+            "accuracy_above_0.80": self.get_accuracy(0.8),
+            "coverage_above_0.50": self.get_coverage(0.5),
+            "coverage_above_0.60": self.get_coverage(0.6),
+            "coverage_above_0.70": self.get_coverage(0.7),
+            "coverage_above_0.80": self.get_coverage(0.8),
+        }
+
+
+    @staticmethod
+    def save_output(
+        metadata: dict, eval_result: dict, save_path: str = "../data/"
+    ) -> str:
+        """Save evaluation results to files.
+
+        Args:
+            metadata: Dictionary of metadata parameters
+            eval_result: Dictionary containing evaluation metrics
+            save_path: (str) The folder where results should be saved. Default is "../data/".
+
+        Returns
+        -------
+            str: The folder path where results were stored
+        """
+        if not metadata:
+            raise ValueError("Metadata dictionary cannot be empty")
+
+        current_datetime = datetime.now()
+        formatted_datetime = current_datetime.strftime("%Y%m%d_%H%M%S")
+
+        # Create folder name
+        folder_name = os.path.join(
+            save_path,
+            f"outputs/{formatted_datetime}_{metadata.get('evaluation_type', 'unnamed')}",
+        )
+
+        # Create directory safely
+        os.makedirs(folder_name, exist_ok=True)
+
+        # Save metadata
+        metadata_path = os.path.join(folder_name, "metadata.json")
+        with open(metadata_path, "w") as outfile:
+            json.dump(metadata, outfile, indent=4)
+
+        # Save evaluation result
+        eval_path = os.path.join(folder_name, "evaluation_result.json")
+        with open(eval_path, "w") as outfile:
+            json.dump(eval_result, outfile, indent=4)
+
+        print(f"Successfully saved all outputs to {folder_name}")
+        return folder_name
