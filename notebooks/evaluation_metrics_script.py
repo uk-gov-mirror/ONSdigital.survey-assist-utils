@@ -87,6 +87,16 @@ analyzer.plot_threshold_curves()
 analyzer.get_summary_stats()
 
 # %%
+human_code_col = "sic_ind_occ1"
+llm_code_col = 'chosen_sic_code'
+exclude_patterns = ['x', '-9']
+analyzer.plot_confusion_heatmap(
+        human_code_col = human_code_col,
+        llm_code_col = llm_code_col,
+        top_n = 10,
+        exclude_patterns = exclude_patterns)
+
+# %%
 # Confusion matrix:
 merged_df =  pd.read_csv('/home/user/survey-assist-utils/data/evaluation_data/combined_outputs.csv', dtype=str)
 
