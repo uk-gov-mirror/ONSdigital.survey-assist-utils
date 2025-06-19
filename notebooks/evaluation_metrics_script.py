@@ -30,9 +30,6 @@ logger = get_logger(__name__)
 
 
 # %%
-
-
-# %%
 def run_and_display_analysis(file_path: Path, config: ColumnConfig):
     """Loads a single test file, runs a full suite of analyses, and displays
     the results in a structured and readable format in a Jupyter notebook.
@@ -42,7 +39,7 @@ def run_and_display_analysis(file_path: Path, config: ColumnConfig):
         config (ColumnConfig): The configuration object defining column names.
     """
     # --- 1. Header and Data Loading ---
-    # Use Markdown for a clean, bold header for each file's section
+    # Use Markdown for a header for each file's section
     display(Markdown(f"--- \n## 📊 Analysis for: `{file_path.name}`"))
 
     try:
@@ -98,7 +95,7 @@ def run_and_display_analysis(file_path: Path, config: ColumnConfig):
 
 
 # %%
-# Set up some lists to hold the columns we are interested in:
+# Set up the config to contain the columns we are interested in:
 TEST_ENVIRONMENT = True
 if TEST_ENVIRONMENT:
     col_config = ColumnConfig(
@@ -117,12 +114,12 @@ if TEST_ENVIRONMENT:
     # Define the directory and file list
     file_directory = Path("/home/user/survey-assist-utils/data/artificial_data")
     file_test_list = [
-        # "unit_test_confidence.csv",
-        # "unit_test_coverage.csv",
-        # "unit_test_digits_accuracy.csv",
-        # "unit_test_label_accuracy.csv",
-        # "unit_test_heat_map.csv",
-        "unit_test_not_first_choice.csv"
+        "unit_test_confidence.csv",
+        "unit_test_coverage.csv",
+        "unit_test_digits_accuracy.csv",
+        "unit_test_label_accuracy.csv",
+        "unit_test_heat_map.csv",
+        "unit_test_not_first_choice.csv",
     ]
 
 else:
@@ -156,9 +153,9 @@ for filename in file_test_list:
 # %%
 # How well does our first choice match the CCs first choice?
 col_config_top_choice_only = ColumnConfig(
-    clerical_label_cols=["CC_1"],
-    model_label_cols=["SA_1"],
-    model_score_cols=["SA_score_1"],
+    clerical_label_cols=col_config.clerical_label_cols[0:1],
+    model_label_cols=col_config.model_label_cols[0:1],
+    model_score_cols=col_config.model_score_cols[0:1],
     id_col="unique_id",
 )
 
@@ -170,15 +167,9 @@ for filename in file_test_list:
 # %%
 # Is the CC's first choice found somewhere in our suggestions?
 col_config_first_in_set = ColumnConfig(
-    clerical_label_cols=["CC_1"],
-    model_label_cols=["SA_1", "SA_2", "SA_3", "SA_4", "SA_5"],
-    model_score_cols=[
-        "SA_score_1",
-        "SA_score_2",
-        "SA_score_3",
-        "SA_score_4",
-        "SA_score_5",
-    ],
+    clerical_label_cols=col_config.clerical_label_cols[0:1],
+    model_label_cols=col_config.model_label_cols[0:5],
+    model_score_cols=col_config.model_score_cols[0:5],
     id_col="unique_id",
 )
 
