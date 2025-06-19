@@ -10,6 +10,7 @@ _add_derived_columns
 
 import json
 import os
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
@@ -19,36 +20,43 @@ import pandas as pd
 import seaborn as sns
 
 
+@dataclass
+class ColumnConfig:
+    """A data structure to hold the name configurations for the analysis."""
+
+    model_label_cols: list[str]  # eg: ["model_label_1", "model_label_2"]
+    model_score_cols: list[str]  # eg ["model_score_1", "model_score_2"]
+    clerical_label_cols: list[str]  # eg ["clerical_label_1", "clerical_label_2"]
+    id_col: str = "id"
+
+
 # pylint: disable=too-few-public-methods
 class LabelAccuracy:
-    """Analyse classification accuracy for scenarios where model predictions can match any of 
-        multiple ground truth labels."""
+    """Analyse classification accuracy for scenarios where model predictions can match any of
+    multiple ground truth labels.
+    """
 
-    def __init__(
-        self,
-        df: pd.DataFrame,
-        model_label_cols: list[str],  # eg: ["model_label_1", "model_label_2"]
-        model_score_cols: list[str],  # eg ["model_score_1", "model_score_2"]
-        clerical_label_cols: list[str],  # eg ["clerical_label_1", "clerical_label_2"]
-        id_col: str = "id",
-    ):
-        """Initialises with a DataFrame, immediately creating derived columns for analysis."""
-        self.id_col = id_col
-        self.model_label_cols = model_label_cols
-        self.model_score_cols = model_score_cols
-        self.clerical_label_cols = clerical_label_cols
+    def __init__(self, df: pd.DataFrame, column_config: ColumnConfig):
+        """Initialises with a dataframe and a configuratoin object, immediately creating derived
+        columns for analysis.
+        """
+        self.config = column_config
+        self.id_col = self.config.id_col
+        self.model_label_cols = self.config.model_label_cols
+        self.model_score_cols = self.config.model_score_cols
+        self.clerical_label_cols = self.config.clerical_label_cols
 
         # Basic validation
         required_cols = [
-            id_col,
-            *model_label_cols,
-            *model_score_cols,
-            *clerical_label_cols,
+            self.id_col,
+            *self.model_label_cols,
+            *self.model_score_cols,
+            *self.clerical_label_cols,
         ]
 
         if missing_cols := [col for col in required_cols if col not in df.columns]:
             raise ValueError(f"Missing required columns: {missing_cols}")
-        if len(model_label_cols) != len(model_score_cols):
+        if len(self.model_label_cols) != len(self.model_score_cols):
             raise ValueError(
                 "Number of model label columns must match number of score columns"
             )
@@ -58,8 +66,7 @@ class LabelAccuracy:
         self._add_derived_columns()
 
     def _add_derived_columns(self):
-        """Adds computed columns for full and partial matches (vectorized).
-        """
+        """Adds computed columns for full and partial matches (vectorized)."""
         # --- Step 1: Reshape the data from wide to long format ---
         # Reshape the model predictions
         model_melted = self.df.melt(
@@ -189,7 +196,7 @@ class LabelAccuracy:
         """Plot accuracy and coverage curves against confidence threshold.
 
         Args:
-            thresholds (list[float], optional): List of threshold values to evaluate. 
+            thresholds (list[float], optional): List of threshold values to evaluate.
                 If None, default thresholds will be used.
             figsize (tuple[int, int], optional): Size of the figure in inches (width, height).
                 Defaults to (10, 6).
@@ -340,12 +347,12 @@ class LabelAccuracy:
 
         # Save metadata
         metadata_path = os.path.join(folder_name, "metadata.json")
-        with open(metadata_path, "w") as outfile:
+        with open(metadata_path, "w", encoding="utf-8") as outfile:
             json.dump(metadata, outfile, indent=4)
 
         # Save evaluation result
         eval_path = os.path.join(folder_name, "evaluation_result.json")
-        with open(eval_path, "w") as outfile:
+        with open(eval_path, "w", encoding="utf-8") as outfile:
             json.dump(eval_result, outfile, indent=4)
 
         print(f"Successfully saved all outputs to {folder_name}")
