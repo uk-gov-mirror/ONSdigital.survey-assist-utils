@@ -1,138 +1,78 @@
 """Module contains functionality to evaluate alignment between Clerical Coders (CC)
 and Survey Assist (SA) results.
 
-The class is AlignmentEvaluator
+The class is LabelAccuracy
 
 The methods are:
-calculate_first_choice_rate
-calculate_match_rate_at_n
+_add_derived_columns
+
 """
 
-from typing import Optional
-from typing import Tuple
 import json
 import os
-from collections import defaultdict
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-#from sklearn.metrics import confusion_matrix
-import pandas as pd
-import numpy as np
+
 
 # pylint: disable=too-few-public-methods
-class AlignmentEvaluator:
-    """A class to handle comparison between two sets of classification codes.
-
-    This object loads data and calculates alignment metrics, such as exact
-    and partial (n-digit) match rates between any two specified columns.
-    """
-
-    def __init__(self, filepath: str):
-        """Initialises the evaluator by loading the data.
-
-        Args:
-            filepath (str): The path to the CSV file containing the data.
-        """
-        try:
-            self._data = pd.read_csv(filepath, dtype=str)
-            print(f"Successfully loaded data with shape: {self._data.shape}")
-        except FileNotFoundError:
-            print(f"ERROR: The file was not found at {filepath}")
-            raise
-
-    def calculate_match_rate(
-        self, col1: str, col2: str, n: Optional[int] = None
-    ) -> float:
-        """Calculates the match rate between two columns, either fully or at n-digits.
-
-        Args:
-            col1 (str): The name of the first column to compare.
-            col2 (str): The name of the second column to compare.
-            n (Optional[int], optional): The number of leading digits to compare.
-                If None, a full string comparison is performed. Defaults to None.
-
-        Returns:
-            float: The percentage of rows that match, rounded to two decimal places.
-        """
-        data = self._data
-        if col1 not in data.columns or col2 not in data.columns:
-            raise ValueError(
-                f"One or both columns ('{col1}', '{col2}') not found in data."
-            )
-
-        total = len(data)
-        if total == 0:
-            return 0.0
-
-        # Determine the series to compare based on 'n'
-        if n is None:
-            # Full match - use the original columns
-            series1 = data[col1]
-            series2 = data[col2]
-        else:
-            # Partial match - generate substrings on the fly
-            series1 = data[col1].str[:n]
-            series2 = data[col2].str[:n]
-
-        matching = (series1 == series2).sum()
-        print('matching', matching, 'total', total)
-
-        return round(100 * matching / total, 2), matching
-
 class LabelAccuracy:
-    """Analyse classification accuracy for scenarios where model predictions can match any of multiple ground truth labels."""
+    """Analyse classification accuracy for scenarios where model predictions can match any of 
+        multiple ground truth labels."""
 
     def __init__(
         self,
         df: pd.DataFrame,
+        model_label_cols: list[str],  # eg: ["model_label_1", "model_label_2"]
+        model_score_cols: list[str],  # eg ["model_score_1", "model_score_2"]
+        clerical_label_cols: list[str],  # eg ["clerical_label_1", "clerical_label_2"]
         id_col: str = "id",
-        desc_col: str = "description",
-        model_label_cols: list[str] = ["model_label_1", "model_label_2"],
-        model_score_cols: list[str] = ["model_score_1", "model_score_2"],
-        clerical_label_cols: list[str] = ["clerical_label_1", "clerical_label_2"],
     ):
-        """Initializes with a DataFrame, immediately creating derived columns for analysis."""
+        """Initialises with a DataFrame, immediately creating derived columns for analysis."""
         self.id_col = id_col
-        self.desc_col = desc_col
         self.model_label_cols = model_label_cols
         self.model_score_cols = model_score_cols
         self.clerical_label_cols = clerical_label_cols
 
         # Basic validation
-        required_cols = ([id_col, desc_col] + model_label_cols + model_score_cols + clerical_label_cols)
+        required_cols = [
+            id_col,
+            *model_label_cols,
+            *model_score_cols,
+            *clerical_label_cols,
+        ]
+
         if missing_cols := [col for col in required_cols if col not in df.columns]:
             raise ValueError(f"Missing required columns: {missing_cols}")
         if len(model_label_cols) != len(model_score_cols):
-            raise ValueError("Number of model label columns must match number of score columns")
+            raise ValueError(
+                "Number of model label columns must match number of score columns"
+            )
 
-        self.df = df.copy().astype(str, errors='ignore')
+        self.df = df.copy().astype(str, errors="ignore")
         # This one method now efficiently calculates all match types
-        self._add_derived_columns_vectorized()
+        self._add_derived_columns()
 
-    def _add_derived_columns_vectorized(self):
-        """
-        Efficiently adds computed columns for full and partial matches using a vectorized approach.
-        This is much faster than using df.apply() on large datasets.
+    def _add_derived_columns(self):
+        """Adds computed columns for full and partial matches (vectorized).
         """
         # --- Step 1: Reshape the data from wide to long format ---
         # Reshape the model predictions
         model_melted = self.df.melt(
             id_vars=[self.id_col],
             value_vars=self.model_label_cols,
-            value_name="model_label"
+            value_name="model_label",
         ).dropna(subset=["model_label"])
 
         # Reshape the clerical (ground truth) labels
         clerical_melted = self.df.melt(
             id_vars=[self.id_col],
             value_vars=self.clerical_label_cols,
-            value_name="clerical_label"
+            value_name="clerical_label",
         ).dropna(subset=["clerical_label"])
 
         # --- Step 2: Find IDs with at least one FULL match ---
@@ -141,7 +81,7 @@ class LabelAccuracy:
             model_melted,
             clerical_melted,
             left_on=[self.id_col, "model_label"],
-            right_on=[self.id_col, "clerical_label"]
+            right_on=[self.id_col, "clerical_label"],
         )
         # Get the unique list of IDs that had a match
         full_match_ids = full_matches[self.id_col].unique()
@@ -149,14 +89,16 @@ class LabelAccuracy:
         # --- Step 3: Find IDs with at least one 2-DIGIT match ---
         # Create the 2-digit substring columns before merging
         model_melted["model_label_2_digit"] = model_melted["model_label"].str[:2]
-        clerical_melted["clerical_label_2_digit"] = clerical_melted["clerical_label"].str[:2]
+        clerical_melted["clerical_label_2_digit"] = clerical_melted[
+            "clerical_label"
+        ].str[:2]
 
         # Merge where the ID and the 2-digit substring match
         partial_matches = pd.merge(
             model_melted,
             clerical_melted,
             left_on=[self.id_col, "model_label_2_digit"],
-            right_on=[self.id_col, "clerical_label_2_digit"]
+            right_on=[self.id_col, "clerical_label_2_digit"],
         )
         partial_match_ids = partial_matches[self.id_col].unique()
 
@@ -168,65 +110,64 @@ class LabelAccuracy:
         # Also add the max_score column as before
         # Ensure score columns are numeric before finding the max
         for col in self.model_score_cols:
-            self.df[col] = pd.to_numeric(self.df[col], errors='coerce')
+            self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
         self.df["max_score"] = self.df[self.model_score_cols].max(axis=1)
 
-    def get_accuracy(self, threshold: float = 0.0, match_type: str = 'full') -> float:
-        """
-        Calculate accuracy for predictions above a confidence threshold.
+    def get_accuracy(self, threshold: float = 0.0, match_type: str = "full") -> float:
+        """Calculate accuracy for predictions above a confidence threshold.
 
         Args:
             threshold (float): Minimum confidence score threshold.
             match_type (str): The type of accuracy to calculate.
                               Options: 'full' (default) or '2-digit'.
+
         Returns:
             float: Accuracy as a percentage.
         """
-        if match_type == '2-digit':
-            correct_col = 'is_correct_2_digit'
-        elif match_type == 'full':
-            correct_col = 'is_correct'
+        if match_type == "2-digit":
+            correct_col = "is_correct_2_digit"
+        elif match_type == "full":
+            correct_col = "is_correct"
         else:
             raise ValueError("match_type must be 'full' or '2-digit'")
 
         if correct_col not in self.df.columns:
-            raise RuntimeError(f"Derived column '{correct_col}' not found. Ensure _add_derived_columns ran correctly.")
+            raise RuntimeError(
+                f"Derived column '{correct_col}' not found. Ensure _add_derived_columns ran."
+            )
 
         filtered_df = self.df[self.df["max_score"] >= threshold]
         if len(filtered_df) == 0:
             return 0.0
-            
-        return 100 * filtered_df[correct_col].mean() 
+
+        return 100 * filtered_df[correct_col].mean()
 
     def get_coverage(self, threshold: float = 0.0) -> float:
-        """
-        Calculate percentage of predictions above the given confidence threshold.
+        """Calculate percentage of predictions above the given confidence threshold.
 
         Args:
             threshold: Minimum confidence score threshold (default: 0.0)
 
-        Returns
+        Returns:
         -------
             float: Coverage as a percentage
         """
         return 100 * (self.df["max_score"] >= threshold).mean()
 
-
     def get_threshold_stats(
-        self, thresholds: list[float] = None
+        self, thresholds: Optional[list[float]] = None
     ) -> pd.DataFrame:
-        """
-        Calculate accuracy and coverage across multiple thresholds.
+        """Calculate accuracy and coverage across multiple thresholds.
 
         Args:
-            thresholds: List of threshold values to evaluate (default: None)
+            thresholds: list of threshold values to evaluate (default: None)
 
-        Returns
+        Returns:
         -------
             DataFrame with columns: threshold, accuracy, coverage
         """
         if thresholds is None:
-            thresholds = np.linspace(0, 1, 21)
+            thresholds = np.linspace(0, 1, 21).tolist()
 
         stats = []
         for threshold in thresholds:
@@ -240,19 +181,18 @@ class LabelAccuracy:
 
         return pd.DataFrame(stats)
 
-
-
     def plot_threshold_curves(
         self,
-        thresholds: list[float] = None,
-        figsize: Tuple[int, int] = (10, 6),
+        thresholds: Optional[list[float]] = None,
+        figsize: tuple[int, int] = (10, 6),
     ) -> None:
-        """
-        Plot accuracy and coverage curves against confidence threshold.
+        """Plot accuracy and coverage curves against confidence threshold.
 
         Args:
-            thresholds: List of threshold values to evaluate (default: Non
-            ))
+            thresholds (list[float], optional): List of threshold values to evaluate. 
+                If None, default thresholds will be used.
+            figsize (tuple[int, int], optional): Size of the figure in inches (width, height).
+                Defaults to (10, 6).
         """
         stats_df = self.get_threshold_stats(thresholds)
 
@@ -278,14 +218,12 @@ class LabelAccuracy:
         plt.tight_layout()
         plt.show()
 
+    def get_summary_stats(self) -> dict:
+        """Get summary statistics for the classification results.
 
-    def get_summary_stats(self) -> Dict:
-        """
-        Get summary statistics for the classification results.
-
-        Returns
+        Returns:
         -------
-            Dictionary containing various summary statistics
+            dictionary containing various summary statistics
         """
         return {
             "total_samples": len(self.df),
@@ -300,22 +238,20 @@ class LabelAccuracy:
             "coverage_above_0.80": self.get_coverage(0.8),
         }
 
-
     def plot_confusion_heatmap(
         self,
         human_code_col: str,
         llm_code_col: str,
         top_n: int = 10,
-        exclude_patterns: List[str] = None
-    ) -> plt.Axes:
-        """
-        Generates and displays a confusion matrix heatmap for the top N codes.
+        exclude_patterns: Optional[list[str]] = None,
+    ) -> Optional[plt.Axes]:
+        """Generates and displays a confusion matrix heatmap for the top N codes.
 
         Args:
             human_code_col (str): The column name for the ground truth codes.
             llm_code_col (str): The column name for the model's predicted codes.
             top_n (int): The number of most frequent codes to include in the matrix.
-            exclude_patterns (List[str]): A list of substrings to filter out from the
+            exclude_patterns (list[str]): A list of substrings to filter out from the
                                           human_code_col before analysis (e.g., ['x', '-9']).
 
         Returns:
@@ -324,54 +260,53 @@ class LabelAccuracy:
         # --- Step 1: Create a temporary, smaller DataFrame for efficiency ---
         required_cols = [human_code_col, llm_code_col]
         if any(col not in self.df.columns for col in required_cols):
-            raise ValueError("One or both specified columns not found in the DataFrame.")
-            
+            raise ValueError(
+                "One or both specified columns not found in the DataFrame."
+            )
+
         temp_df = self.df[required_cols].copy()
 
         # --- Step 2: Clean the data by excluding specified patterns ---
         if exclude_patterns:
             print(f"Initial shape before filtering: {temp_df.shape}")
             for pattern in exclude_patterns:
-                temp_df = temp_df[~temp_df[human_code_col].str.contains(pattern, na=False)]
+                temp_df = temp_df[
+                    ~temp_df[human_code_col].str.contains(pattern, na=False)
+                ]
             print(f"Shape after filtering: {temp_df.shape}")
-            
+
         # --- Step 3: Find the Most Important Codes to Display ---
         top_human_codes = temp_df[human_code_col].value_counts().nlargest(top_n).index
         top_llm_codes = temp_df[llm_code_col].value_counts().nlargest(top_n).index
 
         # Filter the DataFrame to only include rows with these top codes
         filtered_df = temp_df[
-            temp_df[human_code_col].isin(top_human_codes) & 
-            temp_df[llm_code_col].isin(top_llm_codes)
+            temp_df[human_code_col].isin(top_human_codes)
+            & temp_df[llm_code_col].isin(top_llm_codes)
         ]
-        
+
         if filtered_df.empty:
-            print("No overlapping data found for the top codes. Cannot generate a matrix.")
+            print(
+                "No overlapping data found for the top codes. Cannot generate a matrix."
+            )
             return None
 
         # --- Step 4: Create the Confusion Matrix ---
         confusion_matrix = pd.crosstab(
-            filtered_df[human_code_col],
-            filtered_df[llm_code_col]
+            filtered_df[human_code_col], filtered_df[llm_code_col]
         )
 
         # --- Step 5: Visualize as a Heatmap ---
         plt.figure(figsize=(12, 10))
-        heatmap = sns.heatmap(
-            confusion_matrix, 
-            annot=True,
-            fmt='d',
-            cmap='YlGnBu'
-        )
-        
-        plt.title(f'Confusion Matrix: Top {top_n} Human vs. LLM Codes', fontsize=16)
-        plt.ylabel(f'Human Coder ({human_code_col})', fontsize=12)
-        plt.xlabel(f'LLM Prediction ({llm_code_col})', fontsize=12)
+        heatmap = sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="YlGnBu")
+
+        plt.title(f"Confusion Matrix: Top {top_n} Human vs. LLM Codes", fontsize=16)
+        plt.ylabel(f"Human Coder ({human_code_col})", fontsize=12)
+        plt.xlabel(f"LLM Prediction ({llm_code_col})", fontsize=12)
         plt.tight_layout()
         plt.show()
-        
-        return heatmap
 
+        return heatmap
 
     @staticmethod
     def save_output(
@@ -380,11 +315,11 @@ class LabelAccuracy:
         """Save evaluation results to files.
 
         Args:
-            metadata: Dictionary of metadata parameters
-            eval_result: Dictionary containing evaluation metrics
+            metadata: dictionary of metadata parameters
+            eval_result: dictionary containing evaluation metrics
             save_path: (str) The folder where results should be saved. Default is "../data/".
 
-        Returns
+        Returns:
         -------
             str: The folder path where results were stored
         """
