@@ -62,13 +62,12 @@ class LabelAccuracy:
             )
 
         self.df = df.copy().astype(str, errors="ignore")
-        # This one method now efficiently calculates all match types
+        # This one method now calculates all match types
         self._add_derived_columns()
 
     def _add_derived_columns(self):
         """Adds computed columns for full and partial matches (vectorized)."""
         # --- Step 1: Reshape the data from wide to long format ---
-        # Reshape the model predictions
         model_melted = self.df.melt(
             id_vars=[self.id_col],
             value_vars=self.model_label_cols,
