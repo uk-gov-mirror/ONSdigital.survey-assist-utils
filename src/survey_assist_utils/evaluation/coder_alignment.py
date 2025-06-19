@@ -1,11 +1,29 @@
 """Module contains functionality to evaluate alignment between Clerical Coders (CC)
 and Survey Assist (SA) results.
 
-The class is LabelAccuracy
+The classes are:
+ColumnConfig
+    A data structure to hold the name configurations for the analysis.
+
+LabelAccuracy
+    Analyse classification accuracy for scenarios where model predictions can match any of
+    multiple ground truth labels.
 
 The methods are:
 _add_derived_columns
-
+    Adds computed columns for full and partial matches (vectorized).
+get_accuracy
+    Calculate accuracy for predictions above a confidence threshold.
+get_coverage
+    Calculate percentage of predictions above the given confidence threshold.
+get_threshold_stats
+    Calculate accuracy and coverage across multiple thresholds.
+plot_threshold_curves
+    Plot accuracy and coverage curves against confidence threshold.
+get_summary_stats
+    Get summary statistics for the classification results.
+plot_confusion_heatmap    
+    Generates and displays a confusion matrix heatmap for the top N codes.
 """
 
 import json
