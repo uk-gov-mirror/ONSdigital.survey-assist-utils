@@ -1,4 +1,24 @@
-"""Module contains functionality to preprocess json output from Survey Assist."""
+"""Module contains functionality to preprocess json output from Survey Assist.
+Class:
+    JsonPreprocessor
+        Handles the processing of raw LLM JSON files into a clean DataFrame.
+
+Methods:
+    get_local_filepaths
+        Gets a list of local filepaths to process based on config.
+
+    record_count
+
+    flatten_llm_json_to_dataframe
+
+    count_all_records
+
+    process_files
+
+    merge_eval_data
+
+
+"""
 
 import json
 import logging
