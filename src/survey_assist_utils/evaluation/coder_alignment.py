@@ -46,6 +46,7 @@ class ColumnConfig:
     model_score_cols: list[str]  # eg ["model_score_1", "model_score_2"]
     clerical_label_cols: list[str]  # eg ["clerical_label_1", "clerical_label_2"]
     id_col: str = "id"
+    filter_unambiguous: bool = False
 
 
 # pylint: disable=too-few-public-methods
@@ -72,12 +73,24 @@ class LabelAccuracy:
             *self.clerical_label_cols,
         ]
 
+        # If we are filtering on unambiguous, check it is present
+        if self.config.filter_unambiguous:
+            required_cols.append("Unambiguous")
+
         if missing_cols := [col for col in required_cols if col not in df.columns]:
             raise ValueError(f"Missing required columns: {missing_cols}")
         if len(self.model_label_cols) != len(self.model_score_cols):
             raise ValueError(
                 "Number of model label columns must match number of score columns"
             )
+
+        # If we are filtering on unambiguous, check it is bool, and convert it if not.
+        if self.config.filter_unambiguous:
+            if df["Unambiguous"].dtype != bool:
+                df["Unambiguous"] = (
+                    df["Unambiguous"].str.lower().map({"true": True, "false": False})
+                )
+            df = df[df["Unambiguous"]]
 
         self.df = df.copy().astype(str, errors="ignore")
         # This one method now calculates all match types
@@ -131,9 +144,11 @@ class LabelAccuracy:
             left_on=[self.id_col, "model_label"],
             right_on=[self.id_col, "clerical_label"],
         )
+        # Get the unique list of IDs that had a match
         full_match_ids = full_matches[self.id_col].unique()
 
         # --- Step 3: Find IDs with at least one 2-DIGIT match ---
+        # Create the 2-digit substring columns before merging
         model_melted["model_label_2_digit"] = model_melted["model_label"].str[:2]
         clerical_melted["clerical_label_2_digit"] = clerical_melted[
             "clerical_label"
@@ -148,10 +163,13 @@ class LabelAccuracy:
         )
         partial_match_ids = partial_matches[self.id_col].unique()
 
-        # --- Step 4: Map results and add max_score column ---
+        # --- Step 4: Map the results back to the original DataFrame ---
+        # Create the new boolean columns
         self.df["is_correct"] = self.df[self.id_col].isin(full_match_ids)
         self.df["is_correct_2_digit"] = self.df[self.id_col].isin(partial_match_ids)
 
+        # Also add the max_score column as before
+        # Ensure score columns are numeric before finding the max
         for col in self.model_score_cols:
             self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
         self.df["max_score"] = self.df[self.model_score_cols].max(axis=1)
