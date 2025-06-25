@@ -30,7 +30,7 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -150,17 +150,29 @@ class LabelAccuracy:
             self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
         self.df["max_score"] = self.df[self.model_score_cols].max(axis=1)
 
-    def get_accuracy(self, threshold: float = 0.0, match_type: str = "full") -> float:
+    def get_accuracy(
+        self, threshold: float = 0.0, match_type: str = "full", extended: bool = False
+    ) -> Union[float, dict[str, float]]:
         """Calculate accuracy for predictions above a confidence threshold.
 
         Args:
             threshold (float): Minimum confidence score threshold.
             match_type (str): The type of accuracy to calculate.
-                              Options: 'full' (default) or '2-digit'.
+                            Options: 'full' (default) or '2-digit'.
+            extended (bool): If True, returns a dictionary with detailed accuracy metrics.
+                            If False, returns only the accuracy percentage.
 
         Returns:
-            float: Accuracy as a percentage.
+            Union[float, dict[str, float]]:
+                - If extended is False: Accuracy as a percentage (float).
+                - If extended is True: A dictionary containing:
+                    - 'accuracy_percent' (float): Accuracy as a percentage.
+                    - 'matches' (int): Number of matching predictions.
+                    - 'non_matches' (int): Number of non-matching predictions.
+                    - 'total_considered' (int): Total number of predictions considered.
         """
+        # Set a fefault return value:
+
         if match_type == "2-digit":
             correct_col = "is_correct_2_digit"
         elif match_type == "full":
@@ -173,11 +185,40 @@ class LabelAccuracy:
                 f"Derived column '{correct_col}' not found. Ensure _add_derived_columns ran."
             )
 
+        # 1. Filter the DataFrame based on the confidence threshold
         filtered_df = self.df[self.df["max_score"] >= threshold]
-        if len(filtered_df) == 0:
+        total_in_subset = len(filtered_df)
+
+        # Handle the edge case where no data meets the threshold
+        if total_in_subset == 0:
+            if extended:
+                return {
+                    "accuracy_percent": 0.0,
+                    "matches": 0,
+                    "non_matches": 0,
+                    "total_considered": 0,
+                }
             return 0.0
 
-        return 100 * filtered_df[correct_col].mean()
+        # 2. Calculate the raw counts
+        match_count = filtered_df[correct_col].sum()
+        non_match_count = total_in_subset - match_count
+
+        # 3. Calculate the percentage
+        accuracy_percent = 100 * match_count / total_in_subset
+
+        # 4. Return all values in a structured dictionary
+        if extended:
+            return_value = {
+                "accuracy_percent": round(accuracy_percent, 1),
+                "matches": int(match_count),
+                "non_matches": int(non_match_count),
+                "total_considered": total_in_subset,
+            }
+        else:
+            return_value = accuracy_percent
+
+        return return_value
 
     def get_coverage(self, threshold: float = 0.0) -> float:
         """Calculate percentage of predictions above the given confidence threshold.
