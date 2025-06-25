@@ -218,11 +218,19 @@ class JsonPreprocessor:
             return pd.DataFrame()
 
         combined_df = pd.concat(all_dfs, ignore_index=True)
-        # logging.info("Combined all files into a DataFrame with shape %s", combined_df.shape)
+        logging.info(
+            "Combined all files into a DataFrame with shape %s", combined_df.shape
+        )
+
+        # If we did retries, we will have duplicaes. We sort these so that those with na values
+        # appear last and are discarded when we drop duplicates:
+        combined_df = combined_df.sort_values(
+            by="candidate_1_sic_code", na_position="last"
+        )
 
         unique_id_col = self.config["json_keys"]["unique_id"]
         combined_df.drop_duplicates(subset=[unique_id_col], inplace=True)
-        # logging.info("Shape after dropping duplicates: %s", combined_df.shape)
+        logging.info("Shape after dropping duplicates: %s", combined_df.shape)
 
         return combined_df
 
