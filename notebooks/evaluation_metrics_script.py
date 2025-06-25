@@ -26,7 +26,7 @@
 # --- Imports and Setup ---
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, TypedDict
+from typing import Any, TypedDict, Union
 
 import pandas as pd
 from IPython.display import Markdown, display
@@ -149,6 +149,28 @@ def calculate_analysis_metrics(analyzer: LabelAccuracy) -> dict[str, Any]:
 
 
 # %%
+def load_main_dataframe(path: Path) -> Union[pd.DataFrame, None]:
+    """Attempts to load a CSV file into a pandas DataFrame.
+
+    Logs success or failure, and returns the DataFrame if successful,
+    or None if the file is not found.
+
+    Args:
+        path (Path): The full path to the CSV file.
+
+    Returns:
+        Union[pd.DataFrame, None]: The loaded DataFrame, or None if the file is missing.
+    """
+    try:
+        df = pd.read_csv(path, dtype=str)
+        logger.info(f"Successfully loaded main data file with shape: {df.shape}")
+        return df
+    except FileNotFoundError:
+        logger.error(f"Main data file not found: {path}")
+        return None
+
+
+# %%
 # --- Step 3: Define the Test Matrix and Configuration ---
 
 
@@ -218,17 +240,7 @@ test_cases: list[TestCase] = [
 ]
 
 # --- Step 4: Run the Matrix, Collect Results, and Save to CSV ---
-main_dataframe: Optional[pd.DataFrame]
-
-# Load the primary data file once to avoid re-reading it in the loop
-try:
-    main_dataframe = pd.read_csv(full_file_path, dtype=str)
-    logger.info(
-        f"Successfully loaded main data file with shape: {main_dataframe.shape}"
-    )
-except FileNotFoundError:
-    logger.error(f"Main data file not found: {full_file_path}")
-    main_dataframe = None
+main_dataframe = load_main_dataframe(full_file_path)
 
 all_results = []
 
