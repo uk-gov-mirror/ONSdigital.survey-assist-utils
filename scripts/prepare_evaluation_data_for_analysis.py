@@ -53,7 +53,7 @@ def load_config(config_path):
 
 
 # Load configuration from .toml file
-main_config = load_config("config.toml")
+main_config = load_config("/home/user/survey-assist-utils/config.toml")
 log_config = main_config.get("logging", {})
 
 # Extract values with defaults
