@@ -28,6 +28,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, TypedDict, Union
 
+import numpy as np
 import pandas as pd
 from IPython.display import Markdown, display
 
@@ -149,7 +150,9 @@ def calculate_analysis_metrics(analyzer: LabelAccuracy) -> dict[str, Any]:
 
 
 # %%
-def load_main_dataframe(path: Path) -> Union[pd.DataFrame, None]:
+def load_main_dataframe(
+    path: Path, columns_to_clean: list
+) -> Union[pd.DataFrame, None]:
     """Attempts to load a CSV file into a pandas DataFrame.
 
     Logs success or failure, and returns the DataFrame if successful,
@@ -157,12 +160,18 @@ def load_main_dataframe(path: Path) -> Union[pd.DataFrame, None]:
 
     Args:
         path (Path): The full path to the CSV file.
+        columns_to_clean (list): columns to replace imposter nans
 
     Returns:
         Union[pd.DataFrame, None]: The loaded DataFrame, or None if the file is missing.
     """
+    missing_value_formats = ["", " ", "nan", "None", "Null", "<NA>"]
     try:
         df = pd.read_csv(path, dtype=str)
+        df[columns_to_clean] = df[columns_to_clean].replace(
+            missing_value_formats, np.nan
+        )
+
         logger.info(f"Successfully loaded main data file with shape: {df.shape}")
         return df
     except FileNotFoundError:
@@ -240,7 +249,8 @@ test_cases: list[TestCase] = [
 ]
 
 # --- Step 4: Run the Matrix, Collect Results, and Save to CSV ---
-main_dataframe = load_main_dataframe(full_file_path)
+columns_to_clean_main = model_label_cols + model_score_cols + clerical_label_cols
+main_dataframe = load_main_dataframe(full_file_path, columns_to_clean_main)
 
 all_results = []
 
@@ -294,3 +304,6 @@ if all_results:
     logger.info(f" Successfully saved evaluation summary to: {output_path}")
     display(Markdown("###  Final Collated Results"))
     display(results_df)
+
+# %% [markdown]
+# ###  Add in matrix for 2 digits
