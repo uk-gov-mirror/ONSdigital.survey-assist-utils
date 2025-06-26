@@ -83,21 +83,45 @@ class LabelAccuracy:
         # This one method now calculates all match types
         self._add_derived_columns()
 
+    def _melt_and_clean(self, value_vars: list[str], value_name: str) -> pd.DataFrame:
+        """A helper function to reshape, clean, and prepare data for matching.
+
+        It takes a list of columns, melts them into a long format, replaces
+        various missing value formats with a standard NaN, and drops them.
+
+        Args:
+            value_vars (list[str]): The columns to melt (e.g., model or clerical cols).
+            value_name (str): The name to give the new value column (e.g., 'model_label').
+
+        Returns:
+            pd.DataFrame: A cleaned, long-format DataFrame with id and value columns.
+        """
+        missing_value_formats = ["", " ", "nan", "None", "Null", "<NA>"]
+
+        # Melt the specified columns
+        melted_df = self.df.melt(
+            id_vars=[self.id_col],
+            value_vars=value_vars,
+            value_name=value_name,
+        )
+
+        # Replace all non-standard missing values and drop them in one chain
+        melted_df[value_name] = melted_df[value_name].replace(
+            missing_value_formats, np.nan
+        )
+        cleaned_df = melted_df.dropna(subset=[value_name])
+
+        return cleaned_df
+
     def _add_derived_columns(self):
         """Adds computed columns for full and partial matches (vectorized)."""
-        # --- Step 1: Reshape the data from wide to long format ---
-        model_melted = self.df.melt(
-            id_vars=[self.id_col],
-            value_vars=self.model_label_cols,
-            value_name="model_label",
-        ).dropna(subset=["model_label"])
-
-        # Reshape the clerical (ground truth) labels
-        clerical_melted = self.df.melt(
-            id_vars=[self.id_col],
-            value_vars=self.clerical_label_cols,
-            value_name="clerical_label",
-        ).dropna(subset=["clerical_label"])
+        # --- Step 1: Reshape data using the cleaner function ---
+        model_melted = self._melt_and_clean(
+            value_vars=self.model_label_cols, value_name="model_label"
+        )
+        clerical_melted = self._melt_and_clean(
+            value_vars=self.clerical_label_cols, value_name="clerical_label"
+        )
 
         # --- Step 2: Find IDs with at least one FULL match ---
         # Merge the two long dataframes where the ID and the label match exactly
@@ -107,11 +131,9 @@ class LabelAccuracy:
             left_on=[self.id_col, "model_label"],
             right_on=[self.id_col, "clerical_label"],
         )
-        # Get the unique list of IDs that had a match
         full_match_ids = full_matches[self.id_col].unique()
 
         # --- Step 3: Find IDs with at least one 2-DIGIT match ---
-        # Create the 2-digit substring columns before merging
         model_melted["model_label_2_digit"] = model_melted["model_label"].str[:2]
         clerical_melted["clerical_label_2_digit"] = clerical_melted[
             "clerical_label"
@@ -126,13 +148,10 @@ class LabelAccuracy:
         )
         partial_match_ids = partial_matches[self.id_col].unique()
 
-        # --- Step 4: Map the results back to the original DataFrame ---
-        # Create the new boolean columns
+        # --- Step 4: Map results and add max_score column ---
         self.df["is_correct"] = self.df[self.id_col].isin(full_match_ids)
         self.df["is_correct_2_digit"] = self.df[self.id_col].isin(partial_match_ids)
 
-        # Also add the max_score column as before
-        # Ensure score columns are numeric before finding the max
         for col in self.model_score_cols:
             self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
         self.df["max_score"] = self.df[self.model_score_cols].max(axis=1)
