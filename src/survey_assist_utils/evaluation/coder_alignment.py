@@ -98,12 +98,16 @@ class LabelAccuracy:
 
     def _add_derived_columns(self):
         """Adds computed columns for full and partial matches (vectorized)."""
+        missing_value_formats = ["", " ", "nan", "None", "Null", "<NA>"]
         # --- Step 1: Reshape the data from wide to long format ---
         model_melted = self.df.melt(
             id_vars=[self.id_col],
             value_vars=self.model_label_cols,
             value_name="model_label",
         ).dropna(subset=["model_label"])
+        model_melted['model_label'] = model_melted['model_label'].replace(missing_value_formats, np.nan)
+        model_melted = model_melted.dropna(subset=["model_label"])
+
 
         # Reshape the clerical (ground truth) labels
         clerical_melted = self.df.melt(
@@ -111,6 +115,8 @@ class LabelAccuracy:
             value_vars=self.clerical_label_cols,
             value_name="clerical_label",
         ).dropna(subset=["clerical_label"])
+        clerical_melted['clerical_label'] = clerical_melted['clerical_label'].replace(missing_value_formats, np.nan)
+        clerical_melted = clerical_melted.dropna(subset=["clerical_label"])
 
         # --- Step 2: Find IDs with at least one FULL match ---
         # Merge the two long dataframes where the ID and the label match exactly
