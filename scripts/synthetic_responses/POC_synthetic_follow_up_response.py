@@ -3,7 +3,7 @@ from survey_assist_utils.synthetic_responses import (
     answer_followup,
     construct_prompt,
     get_followup,
-    instantiate_llm,
+    instantiate_llm
 )
 
 body = {

@@ -8,7 +8,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts.prompt import PromptTemplate
 from langchain_google_vertexai import VertexAI
 
-from .prompts import _persona_prompt, _reminder_prompt
+from .prompts import _persona_prompt, _reminder_prompt, _predict_characteristics_prompt
 
 
 def instantiate_llm(model_name: str = "gemini-1.5-flash"):
@@ -53,11 +53,20 @@ def get_followup(body: dict | str, classify_endpoint_url=None):
 
 
 def construct_prompt(persona, body, followup):
-    """Constructs and LLM prompt to respond to the followup question in a specified persona"""
+    """Constructs an LLM prompt to respond to the followup question in a specified persona"""
     return _persona_prompt(persona) + _reminder_prompt(body, followup)
+
+def construct_demographic_prediction_prompt(body):
+    """Constructs an LLM prompt to predict the demographic characteristics of a survey respondent"""
+    return _predict_characteristics_prompt(body)
 
 
 def answer_followup(llm, prompt: str):
+    """Gets the LLM's response to the followup question,
+    as specified in the constructed prompt"""
+    return llm.invoke(prompt)
+
+def predict_demographic_info(llm, prompt: str):
     """Gets the LLM's response to the followup question,
     as specified in the constructed prompt"""
     return llm.invoke(prompt)
