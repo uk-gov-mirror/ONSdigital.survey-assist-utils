@@ -10,8 +10,10 @@ LabelAccuracy
     multiple ground truth labels.
 
 The methods are:
+_melt_and_clean
+    A helper function to reshape, clean, and prepare data for matching.
 _add_derived_columns
-    Adds computed columns for full and partial matches (vectorized).
+    Adds computed columns for full and partial matches.
 get_accuracy
     Calculate accuracy for predictions above a confidence threshold.
 get_coverage
@@ -30,7 +32,7 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Union
+from typing import Optional, Union, Set, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -174,6 +176,27 @@ class LabelAccuracy:
             self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
         self.df["max_score"] = self.df[self.model_score_cols].max(axis=1)
 
+
+
+    def _get_sets_from_row(self, row: pd.Series) -> tuple[Set[Any], Set[Any]]:
+        """
+        A private helper to extract unique, non-null sets of labels from a row.
+
+        Args:
+            row (pd.Series): A single row of the DataFrame.
+
+        Returns:
+            tuple[Set[Any], Set[Any]]: A tuple containing two sets:
+                                       the model labels and the clerical labels.
+        """
+        # Get unique, non-null values from the model prediction columns
+        model_labels = set(pd.Series(row[self.model_label_cols]).dropna().unique())
+        
+        # Get unique, non-null values from the ground truth columns
+        clerical_labels = set(pd.Series(row[self.clerical_label_cols]).dropna().unique())
+        
+        return model_labels, clerical_labels
+
     def get_accuracy(
         self, threshold: float = 0.0, match_type: str = "full", extended: bool = False
     ) -> Union[float, dict[str, float]]:
@@ -243,6 +266,115 @@ class LabelAccuracy:
             return_value = accuracy_percent
 
         return return_value
+
+
+    def get_jaccard_similarity(self) -> float:
+        """
+        Calculates the Jaccard Similarity Index for each row and returns the average.
+
+        For each row, it compares the set of model-predicted labels with the set
+        of clerical (ground truth) labels. The Jaccard Index is the size of
+        the intersection divided by the size of the union of these two sets.
+
+        Returns:
+            float: The average Jaccard Similarity Index across all rows in the
+                   DataFrame, returned as a percentage.
+        """
+        
+        def calculate_jaccard_for_row(row):
+            model_set, clerical_set = self._get_sets_from_row(row)
+
+            # If either set is empty, the union will not be empty if the other
+            # set has items. An empty intersection results in a score of 0.
+            if not model_set and not clerical_set:
+                return 1.0  # Both sets are empty, perfect agreement.
+            
+            intersection_size = len(model_set.intersection(clerical_set))
+            union_size = len(model_set.union(clerical_set))
+            
+            if union_size == 0:
+                return 1.0 # Technically covered by the check above, but safe.
+                
+            return intersection_size / union_size
+
+        # Apply the calculation to every row of the DataFrame
+        jaccard_scores = self.df.apply(calculate_jaccard_for_row, axis=1)
+        
+        # Return the average score across all rows, as a percentage
+        average_jaccard_percentage = jaccard_scores.mean() * 100
+        
+        return round(average_jaccard_percentage, 2)
+
+
+
+    def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
+        """
+        Assesses the value add of a single candidate column.
+
+        This method calculates how often a specific candidate's prediction matches
+        any of the ground truth labels, and also how often it specifically
+        matches the primary ground truth label.
+
+        Args:
+            candidate_col (str): The name of the candidate column to evaluate
+                                 (e.g., 'candidate_5_sic_code').
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the match rates and counts.
+        """
+        # --- 1. Validate that all necessary columns exist ---
+        primary_clerical_col = self.clerical_label_cols[0]
+        required_cols = [candidate_col, primary_clerical_col] + self.clerical_label_cols
+        
+        if any(col not in self.df.columns for col in required_cols):
+            raise ValueError(f"One or more required columns not found for this analysis.")
+
+        # Create a working copy, dropping rows where the candidate has no code
+        # This ensures we only evaluate the candidate where it made a prediction.
+        working_df = self.df[[candidate_col, *self.clerical_label_cols]].dropna(
+            subset=[candidate_col]
+        )
+        total_considered = len(working_df)
+
+        if total_considered == 0:
+            return {
+                "candidate_column": candidate_col,
+                "total_predictions_made": 0,
+                "primary_match_percent": 0.0,
+                "primary_match_count": 0,
+                "any_clerical_match_percent": 0.0,
+                "any_clerical_match_count": 0,
+            }
+
+        # --- 2. Calculate match against the PRIMARY clerical code ---
+        primary_matches_mask = (
+            working_df[candidate_col] == working_df[primary_clerical_col]
+        )
+        primary_match_count = primary_matches_mask.sum()
+        primary_match_percent = 100 * primary_match_count / total_considered
+
+        # --- 3. Calculate match against ANY of the clerical codes ---
+        def check_row_for_any_match(row):
+            # Get the single value from the candidate column for this row
+            candidate_value = row[candidate_col]
+            # Get the list of all clerical codes for this row
+            clerical_values = list(row[self.clerical_label_cols].dropna())
+            return candidate_value in clerical_values
+
+        any_match_mask = working_df.apply(check_row_for_any_match, axis=1)
+        any_match_count = any_match_mask.sum()
+        any_match_percent = 100 * any_match_count / total_considered
+
+        # --- 4. Return results in a structured dictionary ---
+        return {
+            "candidate_column": candidate_col,
+            "total_predictions_made": total_considered,
+            "primary_match_percent": round(primary_match_percent, 2),
+            "primary_match_count": int(primary_match_count),
+            "any_clerical_match_percent": round(any_match_percent, 2),
+            "any_clerical_match_count": int(any_match_count),
+        }
+
 
     def get_coverage(self, threshold: float = 0.0) -> float:
         """Calculate percentage of predictions above the given confidence threshold.
