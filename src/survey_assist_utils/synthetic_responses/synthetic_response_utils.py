@@ -3,16 +3,13 @@
 import json
 
 import requests
-from langchain.chains.llm import LLMChain
-from langchain.output_parsers import PydanticOutputParser
-from langchain.prompts.prompt import PromptTemplate
 from langchain_google_vertexai import VertexAI
 
 from .prompts import _persona_prompt, _reminder_prompt
 
 
 def instantiate_llm(model_name: str = "gemini-1.5-flash"):
-    """Initialises a VertexAI instance"""
+    """Initialises a VertexAI instance."""
     return VertexAI(
         model_name=model_name,
         max_output_tokens=1_600,
@@ -42,22 +39,26 @@ def get_followup(body: dict | str, classify_endpoint_url=None):
                 f"key '{term}' is missing from the supplied 'body' argument"
             )
 
-    response = requests.post(classify_endpoint_url, json=body, verify=False)
+    response = requests.post(classify_endpoint_url, json=body, timeout=20)
     response_content = json.loads(response.content.decode("utf-8"))
 
-    has_followup = False if response_content["classified"] else True
-    followup = response_content["followup"]
-    reasoning = response_content["reasoning"]
+    has_followup = "classified" not in response_content
 
-    return (followup, has_followup, reasoning)
+    if has_followup:
+        followup = response_content["followup"]
+        reasoning = response_content["reasoning"]
+        return (followup, has_followup, reasoning)
+    else:
+        return (None, False, None)
 
 
 def construct_prompt(persona, body, followup):
-    """Constructs and LLM prompt to respond to the followup question in a specified persona"""
+    """Constructs and LLM prompt to respond to the followup question in a specified persona."""
     return _persona_prompt(persona) + _reminder_prompt(body, followup)
 
 
 def answer_followup(llm, prompt: str):
     """Gets the LLM's response to the followup question,
-    as specified in the constructed prompt"""
+    as specified in the constructed prompt.
+    """
     return llm.invoke(prompt)
