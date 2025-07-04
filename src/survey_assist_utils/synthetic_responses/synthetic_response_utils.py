@@ -17,10 +17,11 @@ def instantiate_llm(model_name: str = "gemini-1.5-flash"):
         location="europe-west2",
     )
 
+
 def load_request_body(fname: str):
     """Load a JSON file as a request body for querying the /classify endpoint."""
     try:
-        with open(fname, 'r') as f:
+        with open(fname) as f:
             body = json.load(f)
     except FileNotFoundError as e:
         print(f"File {fname} was not found")
