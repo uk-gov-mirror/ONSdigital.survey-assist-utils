@@ -2,7 +2,7 @@
 import json
 from time import gmtime, strftime
 
-from survey_assist_utils.synthetic_responses import (
+from survey_assist_utils.synthetic_responses.synthetic_response_utils import (
     construct_demographic_prediction_prompt,
     instantiate_llm,
     predict_demographic_info,

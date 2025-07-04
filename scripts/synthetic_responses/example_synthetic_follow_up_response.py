@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from survey_assist_utils.synthetic_responses import (
+from survey_assist_utils.synthetic_responses.synthetic_response_utils import (
     answer_followup,
     construct_prompt,
     get_followup,
