@@ -10,10 +10,20 @@ LabelAccuracy
     multiple ground truth labels.
 
 The methods are:
+_safe_zfill
+    Safely pads a value with leading zeros to 5 digits.
+_validate_inputs
+    Centralised method for all input validations.
+_clean_dataframe
+    Cleans the DataFrame by handling data types and missing values.
 _melt_and_clean
-    A helper function to reshape, clean, and prepare data for matching.
+    Helper to reshape data from wide to long and drop any remaining NaNs.
 _add_derived_columns
     Adds computed columns for full and partial matches.
+get_jaccard_similarity
+    Calculates the average Jaccard Similarity Index across all rows.
+get_candidate_contribution
+    Assesses the value add of a single candidate column using vectorised operations.
 get_accuracy
     Calculate accuracy for predictions above a confidence threshold.
 get_coverage
@@ -58,8 +68,6 @@ class LabelAccuracy:
     """
 
     # Define missing value formats once as a class attribute for consistency
-    #    _MISSING_VALUE_FORMATS = ["", " ", "nan", "None", "Null", "<NA>"]
-
     _MISSING_VALUE_FORMATS: ClassVar[list[str]] = [
         "",
         " ",
@@ -113,7 +121,7 @@ class LabelAccuracy:
             return value
 
     def _validate_inputs(self, df: pd.DataFrame):
-        """Centralized method for all input validations."""
+        """Centralised method for all input validations."""
         required_cols = [
             *[self.id_col],
             *self.model_label_cols,
@@ -133,7 +141,7 @@ class LabelAccuracy:
             )
 
     def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Cleans the DataFrame by handling data types and missing values robustly."""
+        """Cleans the DataFrame by handling data types and missing values."""
         # Convert all label columns to string type first
         label_cols = self.model_label_cols + self.clerical_label_cols
         df[label_cols] = df[label_cols].astype(str)
@@ -157,7 +165,7 @@ class LabelAccuracy:
         return melted_df.dropna(subset=[value_name])
 
     def _add_derived_columns(self):
-        """Adds computed columns for full and partial matches (vectorized)."""
+        """Adds computed columns for full and partial matches (vectorised)."""
         model_melted = self._melt_and_clean(self.model_label_cols, "model_label")
         clerical_melted = self._melt_and_clean(
             self.clerical_label_cols, "clerical_label"
@@ -212,7 +220,7 @@ class LabelAccuracy:
         return round(jaccard_scores.mean(), 2)
 
     def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
-        """Assesses the value add of a single candidate column using vectorized operations."""
+        """Assesses the value add of a single candidate column using vectorised operations."""
         primary_clerical_col = self.clerical_label_cols[0]
         if (
             candidate_col not in self.df.columns
@@ -260,26 +268,6 @@ class LabelAccuracy:
             ),
             "any_clerical_match_count": int(any_match_count),
         }
-
-    def _get_sets_from_row(self, row: pd.Series) -> tuple[set[Any], set[Any]]:
-        """A private helper to extract unique, non-null sets of labels from a row.
-
-        Args:
-            row (pd.Series): A single row of the DataFrame.
-
-        Returns:
-            tuple[set[Any], set[Any]]: A tuple containing two sets:
-                                       the model labels and the clerical labels.
-        """
-        # Get unique, non-null values from the model prediction columns
-        model_labels = set(pd.Series(row[self.model_label_cols]).dropna().unique())
-
-        # Get unique, non-null values from the ground truth columns
-        clerical_labels = set(
-            pd.Series(row[self.clerical_label_cols]).dropna().unique()
-        )
-
-        return model_labels, clerical_labels
 
     def get_accuracy(
         self, threshold: float = 0.0, match_type: str = "full", extended: bool = False
