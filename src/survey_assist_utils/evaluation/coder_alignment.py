@@ -36,6 +36,8 @@ get_summary_stats
     Get summary statistics for the classification results.
 plot_confusion_heatmap
     Generates and displays a confusion matrix heatmap for the top N codes.
+save_output
+    Save evaluation results to files.
 """
 
 import json
