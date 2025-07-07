@@ -32,7 +32,7 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Union, Set, Any
+from typing import Any, ClassVar, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -44,9 +44,9 @@ import seaborn as sns
 class ColumnConfig:
     """A data structure to hold the name configurations for the analysis."""
 
-    model_label_cols: list[str]  # eg: ["model_label_1", "model_label_2"]
-    model_score_cols: list[str]  # eg ["model_score_1", "model_score_2"]
-    clerical_label_cols: list[str]  # eg ["clerical_label_1", "clerical_label_2"]
+    model_label_cols: list[str]
+    model_score_cols: list[str]
+    clerical_label_cols: list[str]
     id_col: str = "id"
     filter_unambiguous: bool = False
 
@@ -57,106 +57,125 @@ class LabelAccuracy:
     multiple ground truth labels.
     """
 
+    # Define missing value formats once as a class attribute for consistency
+    #    _MISSING_VALUE_FORMATS = ["", " ", "nan", "None", "Null", "<NA>"]
+
+    _MISSING_VALUE_FORMATS: ClassVar[list[str]] = [
+        "",
+        " ",
+        "nan",
+        "None",
+        "Null",
+        "<NA>",
+    ]
+
     def __init__(self, df: pd.DataFrame, column_config: ColumnConfig):
-        """Initialises with a dataframe and a configuratoin object, immediately creating derived
-        columns for analysis.
-        """
+        """Initialises with a dataframe and a configuration object."""
         self.config = column_config
         self.id_col = self.config.id_col
         self.model_label_cols = self.config.model_label_cols
         self.model_score_cols = self.config.model_score_cols
         self.clerical_label_cols = self.config.clerical_label_cols
 
-        # Basic validation
+        # --- Validation ---
+        self._validate_inputs(df)
+
+        # --- Data Preparation ---
+        working_df = df.copy()
+
+        # Handle unambiguous filter if required
+        if self.config.filter_unambiguous:
+            if working_df["Unambiguous"].dtype != bool:
+                working_df["Unambiguous"] = (
+                    working_df["Unambiguous"]
+                    .str.lower()
+                    .map({"true": True, "false": False})
+                )
+            working_df = working_df[working_df["Unambiguous"]]
+
+        self.df = self._clean_dataframe(working_df)
+        self._add_derived_columns()
+
+    @staticmethod
+    def _safe_zfill(value: Any) -> Any:
+        """Safely pads a value with leading zeros to 5 digits.
+
+        - Ignores NaNs.
+        - Leaves specific non-numeric values like '4+' and '-9' unchanged.
+        - Returns non-numeric strings (like '1234x') as-is.
+        - Pads numeric-like strings ('1234') to '01234'.
+        """
+        if pd.isna(value) or value in ["4+", "-9"]:
+            return value
+        try:
+            return str(int(float(value))).zfill(5)
+        except (ValueError, TypeError):
+            return value
+
+    def _validate_inputs(self, df: pd.DataFrame):
+        """Centralized method for all input validations."""
         required_cols = [
-            self.id_col,
+            *[self.id_col],
             *self.model_label_cols,
             *self.model_score_cols,
             *self.clerical_label_cols,
         ]
 
-        # If we are filtering on unambiguous, check it is present
         if self.config.filter_unambiguous:
             required_cols.append("Unambiguous")
 
         if missing_cols := [col for col in required_cols if col not in df.columns]:
             raise ValueError(f"Missing required columns: {missing_cols}")
+
         if len(self.model_label_cols) != len(self.model_score_cols):
             raise ValueError(
                 "Number of model label columns must match number of score columns"
             )
 
-        # If we are filtering on unambiguous, check it is bool, and convert it if not.
-        if self.config.filter_unambiguous:
-            if df["Unambiguous"].dtype != bool:
-                df["Unambiguous"] = (
-                    df["Unambiguous"].str.lower().map({"true": True, "false": False})
-                )
-            df = df[df["Unambiguous"]]
+    def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Cleans the DataFrame by handling data types and missing values robustly."""
+        # Convert all label columns to string type first
+        label_cols = self.model_label_cols + self.clerical_label_cols
+        df[label_cols] = df[label_cols].astype(str)
 
-        self.df = df.copy().astype(str, errors="ignore")
-        # This one method now calculates all match types
-        self._add_derived_columns()
+        # Replace all "impostor NaNs" in label columns with a true NaN
+        df[label_cols] = df[label_cols].replace(self._MISSING_VALUE_FORMATS, np.nan)
+
+        # Add leading zeros, whilst maintaining nans
+        for col in label_cols:
+            # Apply zfill to non na/nan
+            df[col] = df[col].apply(self._safe_zfill)
+
+        return df
 
     def _melt_and_clean(self, value_vars: list[str], value_name: str) -> pd.DataFrame:
-        """A helper function to reshape, clean, and prepare data for matching.
-
-        It takes a list of columns, melts them into a long format, replaces
-        various missing value formats with a standard NaN, and drops them.
-
-        Args:
-            value_vars (list[str]): The columns to melt (e.g., model or clerical cols).
-            value_name (str): The name to give the new value column (e.g., 'model_label').
-
-        Returns:
-            pd.DataFrame: A cleaned, long-format DataFrame with id and value columns.
-        """
-        missing_value_formats = ["", " ", "nan", "None", "Null", "<NA>"]
-
-        # Melt the specified columns
+        """Helper to reshape data from wide to long and drop any remaining NaNs."""
         melted_df = self.df.melt(
-            id_vars=[self.id_col],
-            value_vars=value_vars,
-            value_name=value_name,
+            id_vars=[self.id_col], value_vars=value_vars, value_name=value_name
         )
-
-        # Replace all non-standard missing values and drop them in one chain
-        melted_df[value_name] = melted_df[value_name].replace(
-            missing_value_formats, np.nan
-        )
-        cleaned_df = melted_df.dropna(subset=[value_name])
-
-        return cleaned_df
+        # Now we only need to drop true NaNs, as cleaning was done in __init__
+        return melted_df.dropna(subset=[value_name])
 
     def _add_derived_columns(self):
         """Adds computed columns for full and partial matches (vectorized)."""
-        # --- Step 1: Reshape data using the cleaner function ---
-        model_melted = self._melt_and_clean(
-            value_vars=self.model_label_cols, value_name="model_label"
-        )
+        model_melted = self._melt_and_clean(self.model_label_cols, "model_label")
         clerical_melted = self._melt_and_clean(
-            value_vars=self.clerical_label_cols, value_name="clerical_label"
+            self.clerical_label_cols, "clerical_label"
         )
 
-        # --- Step 2: Find IDs with at least one FULL match ---
-        # Merge the two long dataframes where the ID and the label match exactly
         full_matches = pd.merge(
             model_melted,
             clerical_melted,
             left_on=[self.id_col, "model_label"],
             right_on=[self.id_col, "clerical_label"],
         )
-        # Get the unique list of IDs that had a match
         full_match_ids = full_matches[self.id_col].unique()
 
-        # --- Step 3: Find IDs with at least one 2-DIGIT match ---
-        # Create the 2-digit substring columns before merging
         model_melted["model_label_2_digit"] = model_melted["model_label"].str[:2]
         clerical_melted["clerical_label_2_digit"] = clerical_melted[
             "clerical_label"
         ].str[:2]
 
-        # Merge where the ID and the 2-digit substring match
         partial_matches = pd.merge(
             model_melted,
             clerical_melted,
@@ -165,36 +184,101 @@ class LabelAccuracy:
         )
         partial_match_ids = partial_matches[self.id_col].unique()
 
-        # --- Step 4: Map the results back to the original DataFrame ---
-        # Create the new boolean columns
         self.df["is_correct"] = self.df[self.id_col].isin(full_match_ids)
         self.df["is_correct_2_digit"] = self.df[self.id_col].isin(partial_match_ids)
 
-        # Also add the max_score column as before
-        # Ensure score columns are numeric before finding the max
         for col in self.model_score_cols:
             self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
         self.df["max_score"] = self.df[self.model_score_cols].max(axis=1)
 
+    def get_jaccard_similarity(self) -> float:
+        """Calculates the average Jaccard Similarity Index across all rows."""
 
+        def calculate_jaccard_for_row(row):
+            # No need to clean here, as self.df is already cleaned
+            model_set = set(row[self.model_label_cols].dropna())
+            clerical_set = set(row[self.clerical_label_cols].dropna())
 
-    def _get_sets_from_row(self, row: pd.Series) -> tuple[Set[Any], Set[Any]]:
-        """
-        A private helper to extract unique, non-null sets of labels from a row.
+            if not model_set and not clerical_set:
+                return 1.0
+
+            intersection_size = len(model_set.intersection(clerical_set))
+            union_size = len(model_set.union(clerical_set))
+
+            return intersection_size / union_size if union_size > 0 else 0.0
+
+        jaccard_scores = self.df.apply(calculate_jaccard_for_row, axis=1)
+
+        return round(jaccard_scores.mean(), 2)
+
+    def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
+        """Assesses the value add of a single candidate column using vectorized operations."""
+        primary_clerical_col = self.clerical_label_cols[0]
+        if (
+            candidate_col not in self.df.columns
+            or primary_clerical_col not in self.df.columns
+        ):
+            raise ValueError("Candidate or primary clerical column not found.")
+
+        # Create a working copy with only necessary, non-null candidate predictions
+        working_df = self.df[
+            [self.id_col, candidate_col, *self.clerical_label_cols]
+        ].dropna(subset=[candidate_col])
+        total_considered = len(working_df)
+
+        if total_considered == 0:
+            return {"candidate_column": candidate_col, "total_predictions_made": 0}
+
+        # --- Primary Match (already vectorized and fast) ---
+        primary_match_mask = (
+            working_df[candidate_col] == working_df[primary_clerical_col]
+        )
+        primary_match_count = primary_match_mask.sum()
+
+        # --- Any Clerical Match (new vectorized approach) ---
+        clerical_melted = working_df.melt(
+            id_vars=[self.id_col, candidate_col],
+            value_vars=self.clerical_label_cols,
+            value_name="clerical_label",
+        ).dropna(subset=["clerical_label"])
+
+        any_match_mask = (
+            clerical_melted[candidate_col] == clerical_melted["clerical_label"]
+        )
+        any_match_ids = clerical_melted[any_match_mask][self.id_col].unique()
+        any_match_count = len(any_match_ids)
+
+        return {
+            "candidate_column": candidate_col,
+            "total_predictions_made": total_considered,
+            "primary_match_percent": round(
+                100 * primary_match_count / total_considered, 2
+            ),
+            "primary_match_count": int(primary_match_count),
+            "any_clerical_match_percent": round(
+                100 * any_match_count / total_considered, 2
+            ),
+            "any_clerical_match_count": int(any_match_count),
+        }
+
+    def _get_sets_from_row(self, row: pd.Series) -> tuple[set[Any], set[Any]]:
+        """A private helper to extract unique, non-null sets of labels from a row.
 
         Args:
             row (pd.Series): A single row of the DataFrame.
 
         Returns:
-            tuple[Set[Any], Set[Any]]: A tuple containing two sets:
+            tuple[set[Any], set[Any]]: A tuple containing two sets:
                                        the model labels and the clerical labels.
         """
         # Get unique, non-null values from the model prediction columns
         model_labels = set(pd.Series(row[self.model_label_cols]).dropna().unique())
-        
+
         # Get unique, non-null values from the ground truth columns
-        clerical_labels = set(pd.Series(row[self.clerical_label_cols]).dropna().unique())
-        
+        clerical_labels = set(
+            pd.Series(row[self.clerical_label_cols]).dropna().unique()
+        )
+
         return model_labels, clerical_labels
 
     def get_accuracy(
@@ -218,7 +302,7 @@ class LabelAccuracy:
                     - 'non_matches' (int): Number of non-matching predictions.
                     - 'total_considered' (int): Total number of predictions considered.
         """
-        # Set a fefault return value:
+        # set a fefault return value:
 
         if match_type == "2-digit":
             correct_col = "is_correct_2_digit"
@@ -267,115 +351,6 @@ class LabelAccuracy:
 
         return return_value
 
-
-    def get_jaccard_similarity(self) -> float:
-        """
-        Calculates the Jaccard Similarity Index for each row and returns the average.
-
-        For each row, it compares the set of model-predicted labels with the set
-        of clerical (ground truth) labels. The Jaccard Index is the size of
-        the intersection divided by the size of the union of these two sets.
-
-        Returns:
-            float: The average Jaccard Similarity Index across all rows in the
-                   DataFrame, returned as a percentage.
-        """
-        
-        def calculate_jaccard_for_row(row):
-            model_set, clerical_set = self._get_sets_from_row(row)
-
-            # If either set is empty, the union will not be empty if the other
-            # set has items. An empty intersection results in a score of 0.
-            if not model_set and not clerical_set:
-                return 1.0  # Both sets are empty, perfect agreement.
-            
-            intersection_size = len(model_set.intersection(clerical_set))
-            union_size = len(model_set.union(clerical_set))
-            
-            if union_size == 0:
-                return 1.0 # Technically covered by the check above, but safe.
-                
-            return intersection_size / union_size
-
-        # Apply the calculation to every row of the DataFrame
-        jaccard_scores = self.df.apply(calculate_jaccard_for_row, axis=1)
-        
-        # Return the average score across all rows, as a percentage
-        average_jaccard_percentage = jaccard_scores.mean() * 100
-        
-        return round(average_jaccard_percentage, 2)
-
-
-
-    def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
-        """
-        Assesses the value add of a single candidate column.
-
-        This method calculates how often a specific candidate's prediction matches
-        any of the ground truth labels, and also how often it specifically
-        matches the primary ground truth label.
-
-        Args:
-            candidate_col (str): The name of the candidate column to evaluate
-                                 (e.g., 'candidate_5_sic_code').
-
-        Returns:
-            Dict[str, Any]: A dictionary containing the match rates and counts.
-        """
-        # --- 1. Validate that all necessary columns exist ---
-        primary_clerical_col = self.clerical_label_cols[0]
-        required_cols = [candidate_col, primary_clerical_col] + self.clerical_label_cols
-        
-        if any(col not in self.df.columns for col in required_cols):
-            raise ValueError(f"One or more required columns not found for this analysis.")
-
-        # Create a working copy, dropping rows where the candidate has no code
-        # This ensures we only evaluate the candidate where it made a prediction.
-        working_df = self.df[[candidate_col, *self.clerical_label_cols]].dropna(
-            subset=[candidate_col]
-        )
-        total_considered = len(working_df)
-
-        if total_considered == 0:
-            return {
-                "candidate_column": candidate_col,
-                "total_predictions_made": 0,
-                "primary_match_percent": 0.0,
-                "primary_match_count": 0,
-                "any_clerical_match_percent": 0.0,
-                "any_clerical_match_count": 0,
-            }
-
-        # --- 2. Calculate match against the PRIMARY clerical code ---
-        primary_matches_mask = (
-            working_df[candidate_col] == working_df[primary_clerical_col]
-        )
-        primary_match_count = primary_matches_mask.sum()
-        primary_match_percent = 100 * primary_match_count / total_considered
-
-        # --- 3. Calculate match against ANY of the clerical codes ---
-        def check_row_for_any_match(row):
-            # Get the single value from the candidate column for this row
-            candidate_value = row[candidate_col]
-            # Get the list of all clerical codes for this row
-            clerical_values = list(row[self.clerical_label_cols].dropna())
-            return candidate_value in clerical_values
-
-        any_match_mask = working_df.apply(check_row_for_any_match, axis=1)
-        any_match_count = any_match_mask.sum()
-        any_match_percent = 100 * any_match_count / total_considered
-
-        # --- 4. Return results in a structured dictionary ---
-        return {
-            "candidate_column": candidate_col,
-            "total_predictions_made": total_considered,
-            "primary_match_percent": round(primary_match_percent, 2),
-            "primary_match_count": int(primary_match_count),
-            "any_clerical_match_percent": round(any_match_percent, 2),
-            "any_clerical_match_count": int(any_match_count),
-        }
-
-
     def get_coverage(self, threshold: float = 0.0) -> float:
         """Calculate percentage of predictions above the given confidence threshold.
 
@@ -423,7 +398,7 @@ class LabelAccuracy:
         """Plot accuracy and coverage curves against confidence threshold.
 
         Args:
-            thresholds (list[float], optional): List of threshold values to evaluate.
+            thresholds (list[float], optional): list of threshold values to evaluate.
                 If None, default thresholds will be used.
             figsize (tuple[int, int], optional): Size of the figure in inches (width, height).
                 Defaults to (10, 6).
