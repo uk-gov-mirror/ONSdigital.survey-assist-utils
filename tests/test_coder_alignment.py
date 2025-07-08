@@ -9,6 +9,7 @@ from src.survey_assist_utils.evaluation.coder_alignment import (
     LabelAccuracy,
 )
 
+
 @pytest.fixture
 def sample_data_and_config():
     """A pytest fixture to create a standard set of test data and config."""
@@ -69,8 +70,8 @@ def test_add_derived_columns(sample_data_and_config):
     assert analyzer.df["is_correct_2_digit"].tolist() == expected_is_correct_2_digit
 
     # Check 'max_score'
-    assert analyzer.df.loc[0, "max_score"] == 0.9
-    assert analyzer.df.loc[4, "max_score"] == 0.85
+    assert analyzer.df.loc[0, "max_score"] == 0.9  # noqa: PLR2004
+    assert analyzer.df.loc[4, "max_score"] == 0.85  # noqa: PLR2004
 
 
 def test_get_accuracy(sample_data_and_config):
@@ -80,9 +81,9 @@ def test_get_accuracy(sample_data_and_config):
 
     # Test full match accuracy (2 correct out of 5 = 40%)
     result = analyzer.get_accuracy(match_type="full", extended=True)
-    assert result["accuracy_percent"] == 40.0
-    assert result["matches"] == 2
-    assert result["total_considered"] == 5
+    assert result["accuracy_percent"] == 40.0  # noqa: PLR2004
+    assert result["matches"] == 2  # noqa: PLR2004
+    assert result["total_considered"] == 5  # noqa: PLR2004
 
 
 def test_get_jaccard_similarity(sample_data_and_config):
@@ -104,10 +105,10 @@ def test_get_candidate_contribution(sample_data_and_config):
     result = analyzer.get_candidate_contribution("model_label_1")
 
     # 5 predictions made, 1 primary match ('12345'), 3 any match ('12345', '4+', '54321')
-    assert result["total_predictions_made"] == 5
-    assert result["primary_match_count"] == 2
-    assert result["any_clerical_match_count"] == 2
-    assert result["any_clerical_match_percent"] == 40.0
+    assert result["total_predictions_made"] == 5  # noqa: PLR2004
+    assert result["primary_match_count"] == 2  # noqa: PLR2004
+    assert result["any_clerical_match_count"] == 2  # noqa: PLR2004
+    assert result["any_clerical_match_percent"] == 40.0  # noqa: PLR2004
 
 
 def test_plot_confusion_heatmap(sample_data_and_config, monkeypatch):
