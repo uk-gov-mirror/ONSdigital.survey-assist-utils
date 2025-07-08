@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.survey_assist_utils.evaluation.coder_alignment import (
+from survey_assist_utils.evaluation.coder_alignment import (
     ColumnConfig,
     LabelAccuracy,
 )
