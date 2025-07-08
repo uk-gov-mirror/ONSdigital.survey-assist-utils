@@ -1,9 +1,20 @@
+"""Unit tests for the LabelAccuracy class in the coder_alignment module.
+
+This test suite verifies the functionality of the LabelAccuracy class, ensuring
+that it correctly processes input data and calculates various evaluation metrics.
+The tests cover:
+- Correct initialization and data cleaning (handling of NaNs, special codes).
+- Accurate creation of derived boolean columns ('is_correct', 'is_correct_2_digit').
+- Validation of core metric calculations (accuracy, Jaccard similarity).
+- Verification of the candidate contribution analysis.
+- The ability of plotting functions to run without raising errors.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
 
-# Adjust the import path based on your project structure
 from src.survey_assist_utils.evaluation.coder_alignment import (
     ColumnConfig,
     LabelAccuracy,
@@ -34,7 +45,9 @@ def sample_data_and_config():
     return test_data, config
 
 
-def test_init_and_cleaning(sample_data_and_config):
+def test_init_and_cleaning(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests that the class initializes and cleans data correctly."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -54,7 +67,9 @@ def test_init_and_cleaning(sample_data_and_config):
     assert pd.isna(analyzer.df.loc[3, "clerical_label_2"])
 
 
-def test_add_derived_columns(sample_data_and_config):
+def test_add_derived_columns(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests that the derived columns are created with correct values."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -74,7 +89,7 @@ def test_add_derived_columns(sample_data_and_config):
     assert analyzer.df.loc[4, "max_score"] == 0.85  # noqa: PLR2004
 
 
-def test_get_accuracy(sample_data_and_config):
+def test_get_accuracy(sample_data_and_config):  # pylint: disable=redefined-outer-name
     """Tests the get_accuracy method."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -86,7 +101,9 @@ def test_get_accuracy(sample_data_and_config):
     assert result["total_considered"] == 5  # noqa: PLR2004
 
 
-def test_get_jaccard_similarity(sample_data_and_config):
+def test_get_jaccard_similarity(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests the Jaccard similarity calculation."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -96,7 +113,9 @@ def test_get_jaccard_similarity(sample_data_and_config):
     assert analyzer.get_jaccard_similarity() == pytest.approx(0.17, abs=0.01)
 
 
-def test_get_candidate_contribution(sample_data_and_config):
+def test_get_candidate_contribution(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests the candidate contribution method for a single candidate."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -111,19 +130,17 @@ def test_get_candidate_contribution(sample_data_and_config):
     assert result["any_clerical_match_percent"] == 40.0  # noqa: PLR2004
 
 
-def test_plot_confusion_heatmap(sample_data_and_config, monkeypatch):
-    """Tests the data preparation part of the heatmap function."""
+def test_plot_confusion_heatmap(
+    sample_data_and_config, monkeypatch
+):  # pylint: disable=redefined-outer-name
+    """Tests that the heatmap function runs without raising an error."""
     # We use monkeypatch to prevent plt.show() from blocking tests
     monkeypatch.setattr(plt, "show", lambda: None)
 
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
 
-    # We can't easily test the plot itself, but we can check if it runs without error
-    # A more advanced test could check the data passed to sns.heatmap
-    try:
-        analyzer.plot_confusion_heatmap(
-            human_code_col="clerical_label_1", llm_code_col="model_label_1", top_n=3
-        )
-    except Exception as e:
-        pytest.fail(f"plot_confusion_heatmap raised an exception: {e}")
+    # The test will fail automatically if any exception is raised.
+    analyzer.plot_confusion_heatmap(
+        human_code_col="clerical_label_1", llm_code_col="model_label_1", top_n=3
+    )
