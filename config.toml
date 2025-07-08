@@ -2,8 +2,8 @@
 # Configuration for Preprocessing and Evaluation
 
 [paths]
-#batch_filepath = "gs://<your-location-here>/evaluation_data/retries.csv"
-#output_filepath = "gs://<your-location-here>/"
+batch_filepath = "gs://<insert-location>/evaluation_data/TLFS_evaluation_data_IT2.csv"
+output_filepath = "gs://<insert-location>/"
 # processed_csv_output = "gs://<your-location-here>/analysis_outputs/added_columns/sic_dataframe_with_flags.csv"
 # "/home/user/survey-assist-utils/data/evaluation_data/sic_dataframe_with_flags.csv" # this file must already have Unambiguous added to it
 # "/<your-location-here>/analysis_outputs/added_columns" # bucket location of unambiguous
@@ -23,44 +23,12 @@ processed_csv_output = "/home/user/survey-assist-utils/data/analysis_outputs/TLF
 date_since = "20250522"
 # Max number of LLM candidates to process per record
 max_candidates = 5
-
-
-
-
-[parameters]
 test_mode = false
 test_num = 0
 rows_to_skip = 0
 
-date_since = "20250522"
-max_candidates = 5
 
 [json_keys]
-unique_id = "unique_id"
-#  'classified': 'classified',
-#  'followup': 'followup',
-#  'source_sic_code': 'sic_code',
-#  'source_sic_description': 'sic_description',
-#  'reasoning': 'reasoning',
-#  'payload_path': 'request_payload',
-#  'payload_job_title': 'job_title',
-#  'payload_job_description': 'job_description',
-#  'candidates_path': 'sic_candidates',
-#  'candidate_sic_code': 'sic_code',
-#  'candidate_description': 'sic_descriptive',
-#  'candidate_likelihood': 'likelihood'},
-
-
-[column_names]
-payload_unique_id = "unique_id"
-payload_job_title = "soc2020_job_title"
-payload_job_description = "soc2020_job_description"
-payload_industry_description = "sic2007_employee"
-
->>>>>>> 5bd2014 (feat(utils): config for the experiment control WIP)
-
-[json_keys]
-# --- Top-level keys from the source JSON ---
 unique_id = "unique_id"
 classified = "classified"
 followup = "followup"
@@ -78,6 +46,13 @@ candidates_path = "sic_candidates"
 candidate_sic_code = "sic_code"
 candidate_description = "sic_descriptive"
 candidate_likelihood = "likelihood"
+
+[column_names]
+payload_unique_id = "unique_id"
+payload_job_title = "soc2020_job_title"
+payload_job_description = "soc2020_job_description"
+payload_industry_description = "sic2007_employee"
+
 
 [logging]
 level = "INFO"

@@ -5,6 +5,8 @@
 /data/evaluation_data/
 /data/analysis_output/
 /data/
+
+# ignore data pictures
 *.png
 
 # ignore notebooks
@@ -184,3 +186,5 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+.DS_Store
