@@ -5,7 +5,12 @@ import json
 import requests
 from langchain_google_vertexai import VertexAI
 
-from .prompts import _persona_prompt, _predict_characteristics_prompt, _reminder_prompt
+from .prompts import (
+    _persona_prompt,
+    _predict_characteristics_prompt,
+    _predict_single_characteristic_prompt,
+    _reminder_prompt,
+)
 
 
 def instantiate_llm(model_name: str = "gemini-1.5-flash"):
@@ -67,6 +72,13 @@ def construct_demographic_prediction_prompt(body):
     characteristics of a survey respondent.
     """
     return _predict_characteristics_prompt(body)
+
+
+def construct_single_demographic_prediction_prompt(body, characteristic):
+    """Constructs an LLM prompt to predict the demographic
+    characteristics of a survey respondent.
+    """
+    return _predict_single_characteristic_prompt(body, characteristic)
 
 
 def answer_followup(llm, prompt: str):

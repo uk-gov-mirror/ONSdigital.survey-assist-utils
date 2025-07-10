@@ -17,7 +17,9 @@ body = {
 llm = instantiate_llm()
 persona = None
 
-followup, has_followup, reasoning = get_followup(body)
+followup, has_followup, reasoning = get_followup(
+    body
+)  # todo: add notes on URL, endpoint & prompt
 PROMPT_FOLLOWUP = construct_prompt(persona, body, followup)
 answer = answer_followup(llm, PROMPT_FOLLOWUP)
 
