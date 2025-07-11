@@ -186,7 +186,7 @@ def test_get_coverage(sample_data_and_config):  # pylint: disable=redefined-oute
     # 4 of 5 scores are >= 0.8, so coverage is 80%
     assert analyzer.get_coverage(threshold=0.8) == pytest.approx(80, abs=0.01)
     # All scores are >= 0.1, so coverage is 100%
-    assert analyzer.get_coverage(threshold=0.1) == pytest.approx(100, abs=0.01)  # noqa: PLR2004
+    assert analyzer.get_coverage(threshold=0.1) == pytest.approx(100, abs=0.01)
 
 
 def test_get_summary_stats(
