@@ -239,13 +239,13 @@ class LabelAccuracy:
         if total_considered == 0:
             return {"candidate_column": candidate_col, "total_predictions_made": 0}
 
-        # --- Primary Match (already vectorized and fast) ---
+        # --- Primary Match ---
         primary_match_mask = (
             working_df[candidate_col] == working_df[primary_clerical_col]
         )
         primary_match_count = primary_match_mask.sum()
 
-        # --- Any Clerical Match (new vectorized approach) ---
+        # --- Any Clerical Match ---
         clerical_melted = working_df.melt(
             id_vars=[self.id_col, candidate_col],
             value_vars=self.clerical_label_cols,
@@ -292,8 +292,7 @@ class LabelAccuracy:
                     - 'non_matches' (int): Number of non-matching predictions.
                     - 'total_considered' (int): Total number of predictions considered.
         """
-        # set a fefault return value:
-
+        # set a default return value:
         if match_type == "2-digit":
             correct_col = "is_correct_2_digit"
         elif match_type == "full":
@@ -495,7 +494,7 @@ class LabelAccuracy:
             filtered_df[human_code_col], filtered_df[llm_code_col]
         )
 
-        # --- Step 5: Visualize as a Heatmap ---
+        # --- Step 5: Visualise as a Heatmap ---
         plt.figure(figsize=(12, 10))
         heatmap = sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="YlGnBu")
 
