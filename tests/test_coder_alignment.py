@@ -3,7 +3,7 @@
 This test suite verifies the functionality of the LabelAccuracy class, ensuring
 that it correctly processes input data and calculates various evaluation metrics.
 The tests cover:
-- Correct initialization and data cleaning (handling of NaNs, special codes).
+- Correct initialisation and data cleaning (handling of NaNs, special codes).
 - Accurate creation of derived boolean columns ('is_correct', 'is_correct_2_digit').
 - Validation of core metric calculations (accuracy, Jaccard similarity).
 - Verification of the candidate contribution analysis.
@@ -90,7 +90,7 @@ def test_get_jaccard_similarity(
     # C: Nan - No valid results
     # D: int=0, uni=2 -> 0
     # E: int=0, uni=4 -> 0
-    # Mean = (1/3 + 1/3 + 1/3 + 0 + 0) / 5 = 1 / 5 = 0.2
+    # Mean = (1/3 + 1/3  + 0 + 0) / 4 = 0.17
     assert analyzer.get_jaccard_similarity() == pytest.approx(0.17, abs=0.01)
 
 
@@ -102,7 +102,7 @@ def test_get_candidate_contribution(
     analyzer = LabelAccuracy(df=df, column_config=config)
     result = analyzer.get_candidate_contribution("model_label_1")
     # model_label_1 matches clerical_label_1 once ('12345') and clerical_label_2
-    # # once (np.nan ignored)
+    # once (np.nan ignored)
     # clerical_label_1: "12345", "01234", "-9", nan, "5432x"
     # model_label_1: "12345", "01234", "99999", "54321", "54322"
     # clerical_label_2: "23456", nan, "4+", nan, "54321"
@@ -112,9 +112,6 @@ def test_get_candidate_contribution(
     # model_label_1 '54321' matches '54321' in clerical_label_2
     assert result["any_clerical_match_count"] == 2  # noqa: PLR2004
     assert result["any_clerical_match_percent"] == pytest.approx(40.0, abs=0.01)
-
-
-# --- New Tests for Improved Coverage ---
 
 
 def test_validate_inputs_raises_errors(
@@ -133,7 +130,7 @@ def test_validate_inputs_raises_errors(
     with pytest.raises(ValueError, match="Missing required columns"):
         LabelAccuracy(df=df, column_config=bad_config_missing)
 
-    ## Test for mismatched score/label columns
+    # Test for mismatched score/label columns
     bad_config_mismatch = ColumnConfig(
         model_label_cols=["model_label_1"],
         model_score_cols=["model_score_1", "model_score_2"],
@@ -178,7 +175,7 @@ def test_get_accuracy_thoroughly(
     assert result_thresh["total_considered"] == 4  # noqa: PLR2004
 
     # Test edge case where no data meets threshold
-    assert analyzer.get_accuracy(threshold=1.0) == 0.0
+    assert analyzer.get_accuracy(threshold=1.0) == pytest.approx(0.0, abs=0.01)
 
 
 def test_get_coverage(sample_data_and_config):  # pylint: disable=redefined-outer-name
@@ -189,7 +186,7 @@ def test_get_coverage(sample_data_and_config):  # pylint: disable=redefined-oute
     # 4 of 5 scores are >= 0.8, so coverage is 80%
     assert analyzer.get_coverage(threshold=0.8) == pytest.approx(80, abs=0.01)
     # All scores are >= 0.1, so coverage is 100%
-    assert analyzer.get_coverage(threshold=0.1) == 100.0  # noqa: PLR2004
+    assert analyzer.get_coverage(threshold=0.1) == pytest.approx(100, abs=0.01)  # noqa: PLR2004
 
 
 def test_get_summary_stats(
