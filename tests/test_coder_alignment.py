@@ -26,9 +26,8 @@ from survey_assist_utils.evaluation.coder_alignment import (
 )
 
 
-# --- Fixtures (No Changes Needed) ---
 @pytest.fixture
-def sample_data_and_config():
+def sample_data_and_config():  # pylint: disable=redefined-outer-name
     """A pytest fixture to create a standard set of test data and config."""
     test_data = pd.DataFrame(
         {
@@ -51,7 +50,9 @@ def sample_data_and_config():
     return test_data, config
 
 
-def test_init_and_cleaning(sample_data_and_config):
+def test_init_and_cleaning(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests that the class initializes and cleans data correctly."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -60,7 +61,9 @@ def test_init_and_cleaning(sample_data_and_config):
     assert pd.isna(analyzer.df.loc[3, "clerical_label_1"])
 
 
-def test_add_derived_columns(sample_data_and_config):
+def test_add_derived_columns(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests that the derived columns are created with correct values."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -75,7 +78,9 @@ def test_add_derived_columns(sample_data_and_config):
     assert analyzer.df.loc[0, "max_score"] == 0.9  # noqa: PLR2004
 
 
-def test_get_jaccard_similarity(sample_data_and_config):
+def test_get_jaccard_similarity(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests the Jaccard similarity calculation."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -89,12 +94,15 @@ def test_get_jaccard_similarity(sample_data_and_config):
     assert analyzer.get_jaccard_similarity() == pytest.approx(0.17, abs=0.01)
 
 
-def test_get_candidate_contribution(sample_data_and_config):
+def test_get_candidate_contribution(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests the candidate contribution method for a single candidate."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
     result = analyzer.get_candidate_contribution("model_label_1")
-    # model_label_1 matches clerical_label_1 once ('12345') and clerical_label_2 once (np.nan ignored)
+    # model_label_1 matches clerical_label_1 once ('12345') and clerical_label_2
+    # # once (np.nan ignored)
     # clerical_label_1: "12345", "01234", "-9", nan, "5432x"
     # model_label_1: "12345", "01234", "99999", "54321", "54322"
     # clerical_label_2: "23456", nan, "4+", nan, "54321"
@@ -109,7 +117,9 @@ def test_get_candidate_contribution(sample_data_and_config):
 # --- New Tests for Improved Coverage ---
 
 
-def test_validate_inputs_raises_errors(sample_data_and_config):
+def test_validate_inputs_raises_errors(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests that __init__ raises ValueErrors for bad configuration."""
     df, _ = sample_data_and_config
 
@@ -137,18 +147,20 @@ def test_validate_inputs_raises_errors(sample_data_and_config):
 def test_safe_zfill_logic():
     """Tests the _safe_zfill static method directly with various edge cases."""
     # Test padding
-    assert LabelAccuracy._safe_zfill("123") == "00123"
+    assert LabelAccuracy._safe_zfill("123") == "00123"  # pylint: disable=W0212
     # Test special codes
-    assert LabelAccuracy._safe_zfill("-9") == "-9"
-    assert LabelAccuracy._safe_zfill("4+") == "4+"
+    assert LabelAccuracy._safe_zfill("-9") == "-9"  # pylint: disable=W0212
+    assert LabelAccuracy._safe_zfill("4+") == "4+"  # pylint: disable=W0212
     # Test non-numeric strings
-    assert LabelAccuracy._safe_zfill("1234x") == "1234x"
+    assert LabelAccuracy._safe_zfill("1234x") == "1234x"  # pylint: disable=W0212
     # Test NaNs
-    assert pd.isna(LabelAccuracy._safe_zfill(np.nan))
-    assert pd.isna(LabelAccuracy._safe_zfill(None))
+    assert pd.isna(LabelAccuracy._safe_zfill(np.nan))  # pylint: disable=W0212
+    assert pd.isna(LabelAccuracy._safe_zfill(None))  # pylint: disable=W0212
 
 
-def test_get_accuracy_thoroughly(sample_data_and_config):
+def test_get_accuracy_thoroughly(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests the get_accuracy method with more scenarios."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -169,7 +181,7 @@ def test_get_accuracy_thoroughly(sample_data_and_config):
     assert analyzer.get_accuracy(threshold=1.0) == 0.0
 
 
-def test_get_coverage(sample_data_and_config):
+def test_get_coverage(sample_data_and_config):  # pylint: disable=redefined-outer-name
     """Tests the get_coverage method."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -180,7 +192,9 @@ def test_get_coverage(sample_data_and_config):
     assert analyzer.get_coverage(threshold=0.1) == 100.0  # noqa: PLR2004
 
 
-def test_get_summary_stats(sample_data_and_config):
+def test_get_summary_stats(
+    sample_data_and_config,
+):  # pylint: disable=redefined-outer-name
     """Tests that get_summary_stats returns a dictionary with correct keys and values."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
@@ -192,7 +206,9 @@ def test_get_summary_stats(sample_data_and_config):
     assert stats["overall_accuracy"] == pytest.approx(40, abs=0.01)
 
 
-def test_plotting_functions_run_without_error(sample_data_and_config, monkeypatch):
+def test_plotting_functions_run_without_error(
+    sample_data_and_config, monkeypatch
+):  # pylint: disable=redefined-outer-name
     """Tests that plotting functions run without raising an error."""
     # Use monkeypatch to prevent plt.show() from blocking tests
     monkeypatch.setattr(plt, "show", lambda: None)
@@ -213,7 +229,9 @@ def test_plotting_functions_run_without_error(sample_data_and_config, monkeypatc
     )
 
 
-def test_save_output(sample_data_and_config, tmp_path):
+def test_save_output(
+    sample_data_and_config, tmp_path
+):  # pylint: disable=redefined-outer-name
     """Tests that save_output correctly creates files in a temporary directory."""
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
