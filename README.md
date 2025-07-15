@@ -101,19 +101,19 @@ make all-tests
 
 Placeholder
 
-# Survey Assist SIC LLM - Evaluation Plan
+# Survey Assist SIC LLM - Evaluation Methodology
+The purpose behind this repo.
 
 ## Overview
 
-The purpose of this document is to provide a framework for evaluating the Survey Assist System. The LLM is prompted to assign a SIC code when given the survey respondents’ answers to questions about employment. We refer to this as Survey Assist (SA) in this document.
-
-The LLM’s output consists of a set of ranked candidate SIC codes and their associated likelihood scores. This evaluation plan covers the primary metrics used to assess the alignment of SA's suggestions with those from expert human clerical coders (CC).
+The purpose of this repo is to provide a framework processing batches of data through the Survey Assist System and evaluating the responses. 
+Starting from a labelled set of survey data, the LLM is prompted to assign a SIC code when given the survey respondents’ answers to questions about employment.
+The LLM’s output consists of a set of ranked candidate SIC codes and their associated likelihood scores. 
+The accuracy and evaluation of these responses are assessed by the metrics in the evaluation modules in this repo.
 
 The analysis is performed by the `LabelAccuracy` class, which takes a DataFrame and a `ColumnConfig` object defining which columns to use for the evaluation.
 
 ## Human Coder Alignment
-
-Primary dataset used to benchmark performance:
 
 * **Dateset** A 2,000-record broadly representative sample from across all SIC sections, containing expert SIC assignments.
 
@@ -172,7 +172,6 @@ When a human coder provides only a single, complete 5-digit SIC code, the respon
 * **Approach:** The `plot_confusion_heatmap()` method creates a frequency table comparing the primary human code against the primary model code for the most common codes in the dataset, and displays it as a heatmap.
 
 * **How it will be used:** This is a critical diagnostic tool. It will be used to identify specific "pitfalls" and provide concrete examples to guide prompt engineering and model fine-tuning.
-
 
 ## Other Analyses
 
