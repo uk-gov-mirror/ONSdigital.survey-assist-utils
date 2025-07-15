@@ -69,7 +69,10 @@
 
 # %% [markdown]
 # ## Set import graphical package, logging
+#
+# we import the dependancies next
 
+# %%
 import logging
 from pathlib import Path
 from typing import Optional
@@ -358,6 +361,8 @@ print(
 
 # %% [markdown]
 # ### Histogram for unambiguous only:
+#
+# 5 digit codes by definition.
 
 # %%
 filtered_data = eval_data[eval_data["Unambiguous"]]
@@ -369,7 +374,8 @@ plot_sic_code_histogram(
 )
 
 # %% [markdown]
-# ### Histogram of the number of codes CCs applied:
+# ### Histogram of the number of codes CCs applied at 5-digits:
+#
 # Distribution of number of possible SIC codes (uncodeable - 0 code, 1 code, 2 codes, 3 codes)
 #
 # relabel the 4 to 4+ to remove ambiguity
