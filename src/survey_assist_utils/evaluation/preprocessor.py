@@ -24,144 +24,171 @@ import json
 import logging
 import os
 from datetime import datetime
+from typing import Any, Union
 
 import pandas as pd
-import toml
+from google.api_core import exceptions
+from google.cloud import storage
+
+logger = logging.getLogger(__name__)
 
 
 class JsonPreprocessor:
     """Handles the processing of raw LLM JSON files into a clean DataFrame."""
 
-    def __init__(self, config_path: str):
-        """Initializes the preprocessor by loading the TOML configuration."""
-        self.config = self._load_config(config_path)
+    def __init__(self, config: dict[str, Any]):
+        """Initializes the preprocessor with a configuration dictionary and a GCS client.
 
-    def _load_config(self, config_path: str):
-        """Loads configuration settings from a .toml file."""
-        try:
-            with open(config_path, encoding="utf-8") as file:
-                configuration = toml.load(file)
-                return configuration
-        except FileNotFoundError:
-            logging.error("Configuration file not found at '%s'", config_path)
-            raise
+        Args:
+            config (dict[str, Any]): A dictionary containing configuration
+                                     settings, typically loaded from a TOML
+                                     file by the calling script.
+        """
+        if not isinstance(config, dict):
+            raise TypeError("config must be a dictionary.")
+        self.config = config
+        self.storage_client = storage.Client()
 
-    def get_local_filepaths(self) -> list[str]:
-        """Gets a list of local filepaths to process based on config."""
-        directory = self.config["paths"]["local_json_dir"]
+    def get_gcs_filepaths(self) -> list[str]:
+        """Gets a list of GCS filepaths to process based on config, excluding sub-directories."""
+        bucket_name = self.config["paths"]["gcs_bucket_name"]
+        prefix = self.config["paths"]["gcs_json_dir"]
         date_str = self.config["parameters"]["date_since"]
         given_date = datetime.strptime(date_str, "%Y%m%d")
 
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
+
         later_files = []
-        logging.info("Searching for files in '%s' on or after %s", directory, date_str)
+        logging.info(
+            "Searching for files in gs://%s/%s on or after %s",
+            bucket_name,
+            prefix,
+            date_str,
+        )
         try:
-            for filename in os.listdir(directory):
+            blobs = self.storage_client.list_blobs(bucket_name, prefix=prefix)
+            for blob in blobs:
+                # Skip "folders" and files in sub-directories
+                if blob.name.endswith("/") or os.path.dirname(
+                    blob.name
+                ) != prefix.strip("/"):
+                    continue
+
+                filename = os.path.basename(blob.name)
                 if filename.endswith("_output.json"):
                     try:
                         file_date = datetime.strptime(filename[:8], "%Y%m%d")
                         if file_date >= given_date:
-                            later_files.append(os.path.join(directory, filename))
+                            later_files.append(f"gs://{bucket_name}/{blob.name}")
                     except ValueError:
+                        # Ignore files that don't start with a valid date
                         continue
             logging.info("Found %d files to process.", len(later_files))
             return later_files
-        except FileNotFoundError:
-            logging.error("Source directory not found: %s", directory)
+        except exceptions.NotFound:
+            logging.error(
+                "Source bucket or prefix not found: gs://%s/%s", bucket_name, prefix
+            )
             return []
 
-    def record_count(self, file_path: str) -> int:
-        """Reads LLM response JSON data from a file, flattens it into a Pandas DataFrame.
+    def _get_json_data(self, file_path: str) -> Union[dict, list, None]:
+        """Reads JSON data from either a local file or a GCS path.
 
         Args:
-            file_path (str): The path to the JSON file.
+            file_path (str): The full local path or gs:// URI of the file.
 
         Returns:
-            num_records (int): A count of the records expected.
-
+            Union[dict, list, None]: The parsed JSON data, or None on error.
         """
-        num_records = 0
         try:
-            with open(file_path, encoding="utf-8") as f:
-                json_data = json.load(f)
-        except FileNotFoundError:
-            print(f"Error: File not found at {file_path}")
-            return num_records
+            if file_path.startswith("gs://"):
+                bucket_name, blob_name = file_path.replace("gs://", "").split("/", 1)
+                blob = self.storage_client.bucket(bucket_name).blob(blob_name)
+                content = blob.download_as_string()
+                return json.loads(content)
+            else:
+                with open(file_path, encoding="utf-8") as f:
+                    return json.load(f)
+        except (FileNotFoundError, exceptions.NotFound):
+            logging.error("File not found at %s", file_path)
+            return None
+        except json.JSONDecodeError as e:
+            logging.error("Error decoding JSON from %s: %s", file_path, e)
+            return None
+        except Exception as e:
+            logging.error("An unexpected error occurred reading %s: %s", file_path, e)
+            return None
 
-        # Ensure json_data is a list of records
+    def record_count(self, file_path: str) -> int:
+        """Reads an LLM response JSON file and counts the number of records.
+
+        Args:
+            file_path (str): The path to the JSON file (local or GCS).
+
+        Returns:
+            int: The number of records in the file.
+        """
+        json_data = self._get_json_data(file_path)
+        if json_data is None:
+            return 0
+
+        if isinstance(json_data, list):
+            return len(json_data)
         if isinstance(json_data, dict):
-            records_to_process = [
-                json_data
-            ]  # Handle case where file contains a single JSON object
-        elif isinstance(json_data, list):
-            records_to_process = json_data
-        else:
-            print("Error: JSON content is not a list or a single object (dictionary).")
-            return num_records
+            return 1
 
-        num_records = len(records_to_process)
-        return num_records
+        logging.warning("JSON content in %s is not a list or a dictionary.", file_path)
+        return 0
 
     def flatten_llm_json_to_dataframe(
         self, file_path: str, max_candidates: int = 5
     ) -> pd.DataFrame:
-        """Reads LLM response JSON data from a file, flattens it into a Pandas DataFrame.
+        """Reads LLM response JSON data from a file (local or GCS), flattens it.
 
         Args:
-            file_path (str): The path to the JSON file.
-            max_candidates (int): The maximum number of SIC candidates to flatten per record.
+            file_path (str): The path to the JSON file (local or GCS).
+            max_candidates (int): The maximum number of SIC candidates to flatten.
 
         Returns:
-            pd.DataFrame: A Pandas DataFrame with the flattened JSON data.
+            pd.DataFrame: A DataFrame with the flattened JSON data.
         """
-        all_flat_records = []
-        print("file_path", file_path)
-
-        try:
-            with open(file_path, encoding="utf-8") as f:
-                json_data = json.load(f)
-        except FileNotFoundError:
-            print(f"Error: File not found at {file_path}")
-            return pd.DataFrame()
-        except json.JSONDecodeError as e:
-            print(f"Error decoding JSON from {file_path}: {e}")
+        json_data = self._get_json_data(file_path)
+        if json_data is None:
             return pd.DataFrame()
 
-        # Ensure json_data is a list of records
+        records_to_process = []
         if isinstance(json_data, dict):
-            records_to_process = [
-                json_data
-            ]  # Handle case where file contains a single JSON object
+            records_to_process = [json_data]
         elif isinstance(json_data, list):
             records_to_process = json_data
         else:
-            print("Error: JSON content is not a list or a single object (dictionary).")
+            logging.error(
+                "JSON content in %s is not a list or a dictionary.", file_path
+            )
             return pd.DataFrame()
 
-        print("records_to_process", len(records_to_process))
+        all_flat_records = []
+        logging.info(
+            "Found %d records to process in %s", len(records_to_process), file_path
+        )
         for record in records_to_process:
             flat_record = {}
-
-            # 1. Add top-level fields
             flat_record["unique_id"] = record.get("unique_id")
             flat_record["classified"] = record.get("classified")
             flat_record["followup"] = record.get("followup")
-            # Rename top-level sic_code & sic_description to avoid clashes with candidate fields
             flat_record["chosen_sic_code"] = record.get("sic_code")
             flat_record["chosen_sic_description"] = record.get("sic_description")
             flat_record["reasoning"] = record.get("reasoning")
 
-            # 2. Flatten request_payload
-            payload = record.get(
-                "request_payload", {}
-            )  # Default to empty dict if payload is missing
+            payload = record.get("request_payload", {})
             flat_record["payload_llm"] = payload.get("llm")
             flat_record["payload_type"] = payload.get("type")
             flat_record["payload_job_title"] = payload.get("job_title")
             flat_record["payload_job_description"] = payload.get("job_description")
             flat_record["payload_industry_descr"] = payload.get("industry_descr")
 
-            # 3. Flatten sic_candidates
-            candidates = record.get("sic_candidates", [])  # Default to empty list
+            candidates = record.get("sic_candidates", [])
             for i in range(max_candidates):
                 if i < len(candidates) and isinstance(candidates[i], dict):
                     candidate = candidates[i]
@@ -173,48 +200,33 @@ class JsonPreprocessor:
                         "likelihood"
                     )
                 else:
-                    # Fill with None if fewer than max_candidates or data is malformed
                     flat_record[f"candidate_{i+1}_sic_code"] = None
                     flat_record[f"candidate_{i+1}_sic_descriptive"] = None
                     flat_record[f"candidate_{i+1}_likelihood"] = None
-
             all_flat_records.append(flat_record)
 
-        df = pd.DataFrame(all_flat_records)
-
-        return df
+        return pd.DataFrame(all_flat_records)
 
     def count_all_records(self) -> int:
-        """Main method to load, flatten, and combine all specified JSON files."""
-        filepaths = self.get_local_filepaths()
-        total_count = 0
-        print("filepaths", filepaths)
-        print(len(filepaths))
+        """Counts the total number of records across all specified JSON files."""
+        filepaths = self.get_gcs_filepaths()
         if not filepaths:
-            logging.warning("No files found to process.")
-            return total_count
-
-        for path in filepaths:
-            count_length = self.record_count(path)
-            total_count = total_count + count_length
-
-        return total_count
+            logging.warning("No files found to count.")
+            return 0
+        return sum(self.record_count(path) for path in filepaths)
 
     def process_files(self) -> pd.DataFrame:
         """Main method to load, flatten, and combine all specified JSON files."""
-        filepaths = self.get_local_filepaths()
-        print("filepaths", filepaths)
-        print(len(filepaths))
+        filepaths = self.get_gcs_filepaths()
         if not filepaths:
             logging.warning("No files found to process. Returning empty DataFrame.")
             return pd.DataFrame()
 
         all_dfs = [self.flatten_llm_json_to_dataframe(path) for path in filepaths]
-
-        # Filter out empty dataframes that may result from processing errors
         all_dfs = [df for df in all_dfs if not df.empty]
 
         if not all_dfs:
+            logging.warning("All files were empty or failed to process.")
             return pd.DataFrame()
 
         combined_df = pd.concat(all_dfs, ignore_index=True)
@@ -222,45 +234,39 @@ class JsonPreprocessor:
             "Combined all files into a DataFrame with shape %s", combined_df.shape
         )
 
-        # If we did retries, we will have duplicaes. We sort these so that those with na values
-        # appear last and are discarded when we drop duplicates:
         combined_df = combined_df.sort_values(
             by="candidate_1_sic_code", na_position="last"
         )
-
         unique_id_col = self.config["json_keys"]["unique_id"]
-        combined_df.drop_duplicates(subset=[unique_id_col], inplace=True)
+        combined_df.drop_duplicates(subset=[unique_id_col], inplace=True, keep="first")
         logging.info("Shape after dropping duplicates: %s", combined_df.shape)
 
         return combined_df
 
-    def merge_eval_data(self, flattened_json_df):
-        """Merges evaluation data from a CSV file with a flattened JSON DataFrame on
-        the 'unique_id' column.
+    def merge_eval_data(self, flattened_json_df: pd.DataFrame) -> pd.DataFrame:
+        """Merges evaluation data from a CSV file with a flattened JSON DataFrame.
+        Note: pandas can read from GCS if 'gcsfs' is installed.
 
-        The method reads a processed CSV file specified in the configuration, removes
-        duplicate entries based on the 'unique_id' column, and performs an inner join
-        with the provided DataFrame. The resulting merged DataFrame includes suffixes
-        to distinguish overlapping column names.
-
-        Parameters:
-            flattened_json_df (pd.DataFrame): A DataFrame containing flattened JSON
-            data with a 'unique_id' column.
+        Args:
+            flattened_json_df (pd.DataFrame): DataFrame with flattened JSON data.
 
         Returns:
-            pd.DataFrame: A merged DataFrame containing rows with matching 'unique_id'
-            values from both sources.
+            pd.DataFrame: A merged DataFrame.
         """
         processed_csv_output = self.config["paths"]["processed_csv_output"]
+        try:
+            eval_data = pd.read_csv(processed_csv_output, dtype={"SIC_Division": str})
+            eval_data = eval_data.drop_duplicates(subset="unique_id")
 
-        eval_data = pd.read_csv(processed_csv_output, dtype={"SIC_Division": str})
-        eval_data = eval_data.drop_duplicates(subset="unique_id")
-        merged_df = pd.merge(
-            eval_data,
-            flattened_json_df,
-            on="unique_id",
-            how="inner",
-            suffixes=("_df1", "_df2"),
-        )
-        print(merged_df.shape)
-        return merged_df
+            merged_df = pd.merge(
+                eval_data,
+                flattened_json_df,
+                on="unique_id",
+                how="inner",
+                suffixes=("_eval", "_llm"),
+            )
+            logging.info("Merged DataFrame shape: %s", merged_df.shape)
+            return merged_df
+        except FileNotFoundError:
+            logging.error("Evaluation data file not found: %s", processed_csv_output)
+            return pd.DataFrame()
