@@ -1,0 +1,20 @@
+# Configuration for Preprocessing and Evaluation
+
+[paths]
+# the original test data is here:
+batch_filepath = "gs://<my-bucket-name>/evaluation_data/e2e_full_test.csv"
+gcs_bucket_name = "<my-bucket-name>"
+evaluation_data = "evaluation_data/"
+
+# The Docker run puts the data here
+gcs_json_dir = "analysis_outputs/"
+
+# After running 'add_data_quality_flags', the helper columns will be written to here:
+analysis_csv = "gs://<my-bucket-name>/analysis_outputs/added_columns/flags_e2e_full_test.csv"
+
+[parameters]
+# Process only files created on or after this date (YYYYMMDD)
+date_since = "20250710"
+
+[json_keys]
+unique_id = "unique_id"
