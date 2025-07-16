@@ -4,61 +4,69 @@ import json
 
 import requests
 from langchain_google_vertexai import VertexAI
-
+from typing import Tuple, Optional
 from .prompts import _persona_prompt, _reminder_prompt
 
-
-def instantiate_llm(model_name: str = "gemini-1.5-flash"):
-    """Initialises a VertexAI instance."""
-    return VertexAI(
-        model_name=model_name,
-        max_output_tokens=1_600,
-        temperature=0.0,
-        location="europe-west2",
-    )
-
-
-def get_followup(body: dict | str, classify_endpoint_url=None):
-    """Send a survey response to the API's /classify endpoint to obtain
-    the followup question.
+class SyntheticResponder:
     """
-    if classify_endpoint_url is None:
-        classify_endpoint_url = "http://0.0.0.0:8080/v1/survey-assist/classify"
+    This class provides functionality for generating synthetic responses to survey questions,
+    particularly follow-up questions, using a specified persona and a Large Language Model (LLM).
 
-    if type(body) not in (dict, str):
-        raise TypeError(
-            "'body' argument must be either a dictionary or a (string) path to a JSON file"
+    Attributes:
+        persona (optional): A dictionary describing the demographic characteristics of the persona
+                           the LLM should emulate. 
+                           Defaults to None.
+        get_question_function (callable): A function that retrieves the follow-up question from an API.
+                                          It should take a parameter 'body' as a first argument, although
+                                          it can accept additional arguments.
+        model_name (str): The name of the LLM to use. 
+                          Defaults to "gemini-1.5-flash".
+        llm: An instance of the LLM (currently VertexAI) used for generating responses.
+
+    Methods:
+        instantiate_llm:
+            Initializes a VertexAI instance. Defaults to "gemini-1.5-flash".
+        construct_prompt:
+            Constructs the LLM prompt to answer a follow-up question, incorporating the persona
+            and survey information.
+        answer_followup:
+            Gets the LLM's response to the follow-up question, using the provided prompt.
+    """
+
+    def __init__(self, 
+                 get_question_function: callable,
+                 persona: Optional[dict] = None, 
+                 model_name="gemini-1.5-flash"):
+        self.persona = persona
+        self.get_question_function = get_question_function
+        self.model_name = model_name
+        self.instantiate_llm(model_name=self.model_name)
+
+    def instantiate_llm(self, model_name: str = "gemini-1.5-flash"):
+        """Initialises a VertexAI instance."""
+        self.llm = VertexAI(
+            model_name=model_name,
+            max_output_tokens=1_600,
+            temperature=0.0,
+            location="europe-west2",
         )
 
-    if type(body) is str:
-        body = json.load(body)
-
-    for term in ["llm", "type", "job_title", "job_description", "org_description"]:
-        if term not in body:
-            raise AttributeError(
-                f"key '{term}' is missing from the supplied 'body' argument"
+    def construct_prompt(self, body: dict | str, followup: str) -> str:
+        """Constructs and LLM prompt to respond to the followup question in a specified persona."""
+        if type(body) not in (dict, str):
+            raise TypeError(
+                "'body' argument must be either a dictionary or a (string) path to a JSON file"
             )
-
-    response = requests.post(classify_endpoint_url, json=body, timeout=20)
-    response_content = json.loads(response.content.decode("utf-8"))
-
-    has_followup = "classified" not in response_content
-
-    if has_followup:
-        followup = response_content["followup"]
-        reasoning = response_content["reasoning"]
-        return (followup, has_followup, reasoning)
-    else:
-        return (None, False, None)
+        if type(body) is str:
+            body = json.load(body)
+        if type(followup) is str:
+            return _persona_prompt(self.persona) + _reminder_prompt(body, followup)
+        else: 
+            raise ValueError("No follow-up question provided.")
 
 
-def construct_prompt(persona, body, followup):
-    """Constructs and LLM prompt to respond to the followup question in a specified persona."""
-    return _persona_prompt(persona) + _reminder_prompt(body, followup)
-
-
-def answer_followup(llm, prompt: str):
-    """Gets the LLM's response to the followup question,
-    as specified in the constructed prompt.
-    """
-    return llm.invoke(prompt)
+    def answer_followup(self, prompt: str) -> str:
+        """Gets the LLM's response to the followup question,
+        as specified in the constructed prompt.
+        """
+        return self.llm.invoke(prompt)
