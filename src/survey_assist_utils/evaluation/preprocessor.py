@@ -107,17 +107,14 @@ class JsonPreprocessor:
                 blob = self.storage_client.bucket(bucket_name).blob(blob_name)
                 content = blob.download_as_string()
                 return json.loads(content)
-            else:
-                with open(file_path, encoding="utf-8") as f:
-                    return json.load(f)
+
+            with open(file_path, encoding="utf-8") as f:
+                return json.load(f)
         except (FileNotFoundError, exceptions.NotFound):
             logging.error("File not found at %s", file_path)
             return None
         except json.JSONDecodeError as e:
             logging.error("Error decoding JSON from %s: %s", file_path, e)
-            return None
-        except Exception as e:
-            logging.error("An unexpected error occurred reading %s: %s", file_path, e)
             return None
 
     def record_count(self, file_path: str) -> int:
