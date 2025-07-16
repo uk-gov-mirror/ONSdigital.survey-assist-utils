@@ -1,3 +1,17 @@
+"""Unit tests for the JsonPreprocessor class.
+
+This module contains a suite of unit tests for the `JsonPreprocessor` class,
+which is responsible for processing raw JSON files from Google Cloud Storage.
+The tests use the `pytest` framework and `unittest.mock` to isolate the
+class from external dependencies, and do not require a live GCS connection.
+
+Key areas tested include:
+- Correct initialisation of the class with a configuration object.
+- Verification of the GCS file discovery and filtering logic.
+- Accurate counting of records within mock JSON data.
+- Deduplication of records based on a unique id.
+"""
+
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -32,8 +46,9 @@ def mock_storage_client():
 # --- Test Cases ---
 
 
-def test_initialization(mock_config, mock_storage_client
-    ): # pylint: disable=redefined-outer-name
+def test_initialization(
+    mock_config, mock_storage_client
+):  # pylint: disable=redefined-outer-name
     """Test that the class initializes correctly with a config."""
     preprocessor = JsonPreprocessor(mock_config)
     assert preprocessor.config == mock_config
@@ -41,8 +56,9 @@ def test_initialization(mock_config, mock_storage_client
     mock_storage_client.assert_called_once()
 
 
-def test_get_gcs_filepaths(mock_config, mock_storage_client
-    ): # pylint: disable=redefined-outer-name
+def test_get_gcs_filepaths(
+    mock_config, mock_storage_client
+):  # pylint: disable=redefined-outer-name
     """Test the logic for listing and filtering files from GCS."""
     # 1. Setup mock blobs that the client will return
     mock_blob_1 = MagicMock()
@@ -50,13 +66,11 @@ def test_get_gcs_filepaths(mock_config, mock_storage_client
 
     mock_blob_2 = MagicMock()
     # Should be filtered out by date
-    mock_blob_2.name = (
-        "test/prefix/20221231_output.json"  
-    )
+    mock_blob_2.name = "test/prefix/20221231_output.json"
 
     mock_blob_3 = MagicMock()
     # Should be filtered out (in sub-directory)
-    mock_blob_3.name = "test/prefix/subfolder/20230106_output.json"  
+    mock_blob_3.name = "test/prefix/subfolder/20230106_output.json"
 
     mock_blob_4 = MagicMock()
     mock_blob_4.name = (
@@ -86,13 +100,12 @@ def test_get_gcs_filepaths(mock_config, mock_storage_client
         "gs://test-bucket/test/prefix/20230301_output.json",
     ]
 
-    assert len(filepaths) == 2  # pylint: disable=W0212
+    assert len(filepaths) == 2  # noqa: PLR2004
     assert sorted(filepaths) == sorted(expected_paths)
     mock_instance.list_blobs.assert_called_with("test-bucket", prefix="test/prefix/")
 
 
-def test_record_count(mock_config
-    ): # pylint: disable=redefined-outer-name
+def test_record_count(mock_config):  # pylint: disable=redefined-outer-name
     """Test counting records from a mock JSON response."""
     preprocessor = JsonPreprocessor(mock_config)
 
@@ -100,23 +113,24 @@ def test_record_count(mock_config
     with patch.object(preprocessor, "_get_json_data") as mock_get_data:
         # Case 1: List of records
         mock_get_data.return_value = [{"id": 1}, {"id": 2}]
-        assert preprocessor.record_count("any/path") == 2  # pylint: disable=W0212
+        assert preprocessor.record_count("any/path") == 2  # noqa: PLR2004
 
         # Case 2: Single record in a dict
         mock_get_data.return_value = {"id": 1}
-        assert preprocessor.record_count("any/path") == 1  # pylint: disable=W0212
+        assert preprocessor.record_count("any/path") == 1
 
         # Case 3: Empty list
         mock_get_data.return_value = []
-        assert preprocessor.record_count("any/path") == 0  # pylint: disable=W0212
+        assert preprocessor.record_count("any/path") == 0
 
         # Case 4: Invalid data
         mock_get_data.return_value = None
-        assert preprocessor.record_count("any/path") == 0  # pylint: disable=W0212
+        assert preprocessor.record_count("any/path") == 0
 
 
-def test_process_files_deduplication(mock_config
-    ): # pylint: disable=redefined-outer-name
+def test_process_files_deduplication(
+    mock_config,
+):  # pylint: disable=redefined-outer-name
     """Test that process_files correctly handles and removes duplicates."""
     preprocessor = JsonPreprocessor(mock_config)
 
@@ -143,7 +157,7 @@ def test_process_files_deduplication(mock_config
         result_df = preprocessor.process_files()
 
         # After concat, there are 4 rows. After drop_duplicates, there should be 3.
-        assert len(result_df) == 3  # pylint: disable=W0212
+        assert len(result_df) == 3  # noqa: PLR2004
         assert sorted(result_df["unique_id"].tolist()) == ["A", "B", "C"]
         # Check that the first instance of 'A' was kept
         assert (
