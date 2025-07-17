@@ -458,7 +458,7 @@ class LabelAccuracy:
             "coverage_above_0.80": self.get_coverage(0.8),
         }
 
-    # pylint: disable=too-many-arguments
+
     def plot_confusion_heatmap(  # noqa: PLR0913
         self,
         human_code_col: str,
