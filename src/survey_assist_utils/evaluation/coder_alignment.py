@@ -458,7 +458,6 @@ class LabelAccuracy:
             "coverage_above_0.80": self.get_coverage(0.8),
         }
 
-
     def plot_confusion_heatmap(  # noqa: PLR0913
         self,
         human_code_col: str,
@@ -539,9 +538,7 @@ class LabelAccuracy:
         return heatmap
 
     @staticmethod
-    def save_output(
-        metadata: dict, eval_result: dict, save_path: str = "data/"
-    ) -> str:
+    def save_output(metadata: dict, eval_result: dict, save_path: str = "data/") -> str:
         """Save evaluation results to files.
 
         Args:
