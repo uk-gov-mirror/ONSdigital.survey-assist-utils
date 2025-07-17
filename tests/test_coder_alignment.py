@@ -12,6 +12,72 @@ The tests cover:
 - Verification of utility methods like get_coverage, get_summary_stats, and save_output.
 """
 
+"""
+Unit tests for data cleaning and evaluation modules.
+"""
+import pandas as pd
+import pytest
+
+# Assuming your classes are in these locations
+#from data_cleaner import DataCleaner
+
+from survey_assist_utils.evaluation.coder_alignment import (
+    ColumnConfig,
+    LabelAccuracy,
+    DataCleaner
+)
+
+# --- Tests for DataCleaner ---
+
+class TestDataCleaner:
+    """Test suite for the DataCleaner class."""
+
+    @pytest.fixture
+    def cleaner(self) -> DataCleaner:
+        """Fixture to provide a DataCleaner instance."""
+        config = {"label_cols": ["sic_code"], "score_cols": ["score"]}
+        return DataCleaner(column_mapping=config)
+
+    @pytest.mark.parametrize(
+        "input_val, expected_val",
+        [
+            (1234, "01234"),
+            ("1234", "01234"),
+            ("01234", "01234"),
+            ("1234x", "1234x"),
+            ("0123x", "0123x"),
+            ("-9", "-9"),
+            ("123.0", "123.0"),
+            ("abcde", "abcde"),
+            (None, None),
+            (float('nan'), float('nan')),
+        ],
+    )
+    def test_safe_zfill(self, cleaner: DataCleaner, input_val: any, expected_val: any):
+        """Tests the _safe_zfill method with various inputs."""
+        if pd.isna(input_val):
+            assert pd.isna(cleaner._safe_zfill(input_val))
+        else:
+            assert cleaner._safe_zfill(input_val) == expected_val
+
+    def test_clean_data(self, cleaner: DataCleaner):
+        """Tests the main clean_data method."""
+        raw_data = {
+            "sic_code": [123, "987x", "invalid", "-9"],
+            "score": ["0.9", "0.8", "bad_score", "0.5"]
+        }
+        raw_df = pd.DataFrame(raw_data)
+        clean_df = cleaner.clean_data(raw_df)
+
+        expected_sic = ["00123", "0987x", "invalid", "-9"]
+        assert clean_df["sic_code"].tolist() == expected_sic
+        assert clean_df["score"].dtype == 'float64'
+        assert pd.isna(clean_df["score"].iloc[2])
+        assert clean_df["score"].iloc[0] == 0.9
+
+
+# --- Tests for LabelAccuracy ---
+
 import json
 import os
 
@@ -139,20 +205,6 @@ def test_validate_inputs_raises_errors(
     )
     with pytest.raises(ValueError, match="must match number of score columns"):
         LabelAccuracy(df=df, column_config=bad_config_mismatch)
-
-
-def test_safe_zfill_logic():
-    """Tests the _safe_zfill static method directly with various edge cases."""
-    # Test padding
-    assert LabelAccuracy._safe_zfill("123") == "00123"  # pylint: disable=W0212
-    # Test special codes
-    assert LabelAccuracy._safe_zfill("-9") == "-9"  # pylint: disable=W0212
-    assert LabelAccuracy._safe_zfill("4+") == "4+"  # pylint: disable=W0212
-    # Test non-numeric strings
-    assert LabelAccuracy._safe_zfill("1234x") == "1234x"  # pylint: disable=W0212
-    # Test NaNs
-    assert pd.isna(LabelAccuracy._safe_zfill(np.nan))  # pylint: disable=W0212
-    assert pd.isna(LabelAccuracy._safe_zfill(None))  # pylint: disable=W0212
 
 
 def test_get_accuracy_thoroughly(
