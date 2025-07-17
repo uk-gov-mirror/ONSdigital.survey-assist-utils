@@ -66,128 +66,11 @@ class ColumnConfig:
     filter_unambiguous: bool = False
 
 
-
-# The standard character length for a fully-padded SIC code.
-_SIC_CODE_PADDING = 5
-"""
-Module for cleaning and preparing evaluation data.
-
-This module provides a class to handle the preprocessing of DataFrames
-used in the evaluation of Survey Assist against clerical coder results.
-"""
-import re
-from typing import Any
-
-import pandas as pd
-
-# Import the custom logger
-from survey_assist_utils.logging import get_logger
-
-# Initialize the custom logger for this module
-logger = get_logger(__name__)
-
 # The standard character length for a fully-padded SIC code.
 _SIC_CODE_PADDING = 5
 
-class DataCleaner:
-    """
-    Handles the cleaning and validation of the raw evaluation DataFrame.
-    
-    This class takes a raw DataFrame and prepares it for analysis by
-    standardizing data types, formatting SIC codes, and handling missing
-    or invalid values.
-    """
-    # Define missing value formats once as a class attribute for consistency
-    _MISSING_VALUE_FORMATS: list[str] = ["-9", "4+"]
 
-    def __init__(self, column_mapping: dict[str, list[str]]):
-        """
-        Initializes the DataCleaner.
-
-        Args:
-            column_mapping (dict[str, list[str]]): A dictionary defining which
-                columns to clean. Expected keys are 'label_cols' and 'score_cols'.
-        """
-        self.label_cols = column_mapping.get("label_cols", [])
-        self.score_cols = column_mapping.get("score_cols", [])
-        # Pre-compile regex for performance
-        self.valid_sic_pattern = re.compile(r'^[0-9x]+$')
-
-    def _safe_zfill(self, value: Any) -> str:
-        """
-        Safely formats a value into a zero-padded 5-digit SIC code string.
-
-        This method handles inputs that are integers, or strings. It correctly
-        pads values that have lost leading zeros (e.g., 1234 -> '01234').
-        It also supports an 'x' character for unknown digits. It returns
-        placeholders and invalid formats unchanged for later filtering.
-
-        Args:
-            value: The input value, typically an int or str.
-
-        Returns:
-            A 5-digit zero-padded string if valid, otherwise the original value.
-        """
-        if pd.isna(value):
-            return value
-
-        value_str = str(value)
-
-        if value_str in self._MISSING_VALUE_FORMATS:
-            return value_str
-
-        # Check if the string contains only numbers and the character 'x'
-        if self.valid_sic_pattern.match(value_str):
-            return value_str.zfill(_SIC_CODE_PADDING)
-        
-        # If the format is invalid (e.g., contains '.', '-', or other chars),
-        # log a warning and return the original value for inspection.
-        logger.warning(
-            "Invalid SIC code format encountered. Returning original value.",
-            invalid_value=value_str
-        )
-        return value_str
-
-    def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Runs the full cleaning pipeline on the DataFrame.
-
-        Args:
-            df (pd.DataFrame): The raw DataFrame to be cleaned.
-
-        Returns:
-            pd.DataFrame: A cleaned and validated DataFrame ready for analysis.
-        """
-        logger.info("Starting data cleaning process...")
-        working_df = df.copy()
-
-        # 1. Standardize SIC code formats (padding)
-        for col in self.label_cols:
-            working_df[col] = working_df[col].apply(self._safe_zfill)
-            logger.info("Standardised padding for column.", column_name=col)
-
-        # 2. Convert score columns to numeric, with logging for errors
-        for col in self.score_cols:
-            original_non_na_count = working_df[col].notna().sum()
-            working_df[col] = pd.to_numeric(working_df[col], errors="coerce")
-            
-            current_na_count = working_df[col].isna().sum()
-            original_na_count = len(working_df) - original_non_na_count
-            coerced_count = current_na_count - original_na_count
-
-            if coerced_count > 0:
-                logger.warning(
-                    "Values could not be converted to numeric and were set to NaN.",
-                    column_name=str(col),
-                    coerced_count=int(coerced_count)
-                )
-
-            logger.info("Converted score column to numeric.", column_name=col)
-
-        logger.info("Data cleaning process complete.")
-        return working_df
-
-
+# pylint: disable=too-few-public-methods
 class LabelAccuracy:
     """Analyse classification accuracy for scenarios where model predictions can match any of
     multiple ground truth labels.
@@ -232,17 +115,23 @@ class LabelAccuracy:
 
     @staticmethod
     def _safe_zfill(value: Any) -> Any:
-        """Safely pads a value with leading zeros to 5 digits.
+        """Safely pads a value with leading zeros to (configurably) 5 digits.
 
         - Ignores NaNs.
         - Leaves specific non-numeric values like '4+' and '-9' unchanged.
         - Returns non-numeric strings (like '1234x') as-is.
         - Pads numeric-like strings ('1234') to '01234'.
+
+        Args:
+            value (Any): The input value to be padded. Can be a string, number, or NaN.
+
+        Returns:
+            Any: The padded string if applicable, or the original value if unchanged.
         """
         if pd.isna(value) or value in ["4+", "-9"]:
             return value
         try:
-            return str(int(float(value))).zfill(5)
+            return str(int(float(value))).zfill(_SIC_CODE_PADDING)
         except (ValueError, TypeError):
             return value
 
@@ -342,7 +231,7 @@ class LabelAccuracy:
 
         jaccard_scores = self.df.apply(calculate_jaccard_for_row, axis=1)
 
-        return round(jaccard_scores.mean(), 2)
+        return jaccard_scores.mean()
 
     def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
         """Assesses the value add of a single candidate column using vectorised operations."""
@@ -506,6 +395,8 @@ class LabelAccuracy:
         self,
         thresholds: Optional[list[float]] = None,
         figsize: tuple[int, int] = (10, 6),
+        save: bool = False,
+        filename: Optional[str] = None,
     ) -> None:
         """Plot accuracy and coverage curves against confidence threshold.
 
@@ -514,6 +405,8 @@ class LabelAccuracy:
                 If None, default thresholds will be used.
             figsize (tuple[int, int], optional): Size of the figure in inches (width, height).
                 Defaults to (10, 6).
+            save (bool): If True, saves the plot to a file instead of showing.
+            filename (str, optional): The path to save the file to. Required if save is True.
         """
         stats_df = self.get_threshold_stats(thresholds)
 
@@ -537,7 +430,13 @@ class LabelAccuracy:
         plt.legend()
         plt.title("Coverage and Accuracy vs Confidence Threshold")
         plt.tight_layout()
-        plt.show()
+        if save:
+            if not filename:
+                raise ValueError("A filename must be provided when save=True.")
+            plt.savefig(filename, dpi=300)
+            plt.close()  # Close the plot to prevent it from displaying in some environments
+        else:
+            plt.show()
 
     def get_summary_stats(self) -> dict:
         """Get summary statistics for the classification results.
