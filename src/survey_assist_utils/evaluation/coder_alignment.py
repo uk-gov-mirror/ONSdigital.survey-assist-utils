@@ -464,8 +464,6 @@ class LabelAccuracy:
         llm_code_col: str,
         top_n: int = 10,
         exclude_patterns: Optional[list[str]] = None,
-        save: bool = False,
-        filename: Optional[str] = None,
     ) -> Optional[plt.Axes]:
         """Generates and displays a confusion matrix heatmap for the top N codes.
 
@@ -481,6 +479,9 @@ class LabelAccuracy:
         Returns:
             plt.Axes: The matplotlib axes object for further customization.
         """
+
+        save = False
+        filename = None
         # --- Step 1: Create a temporary, smaller DataFrame for efficiency ---
         required_cols = [human_code_col, llm_code_col]
         if any(col not in self.df.columns for col in required_cols):
