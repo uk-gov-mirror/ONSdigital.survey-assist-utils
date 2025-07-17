@@ -458,12 +458,15 @@ class LabelAccuracy:
             "coverage_above_0.80": self.get_coverage(0.8),
         }
 
-    def plot_confusion_heatmap(
+    # pylint: disable=too-many-arguments
+    def plot_confusion_heatmap(  # noqa: PLR0913
         self,
         human_code_col: str,
         llm_code_col: str,
         top_n: int = 10,
         exclude_patterns: Optional[list[str]] = None,
+        save: bool = False,
+        filename: Optional[str] = None,
     ) -> Optional[plt.Axes]:
         """Generates and displays a confusion matrix heatmap for the top N codes.
 
@@ -473,6 +476,8 @@ class LabelAccuracy:
             top_n (int): The number of most frequent codes to include in the matrix.
             exclude_patterns (list[str]): A list of substrings to filter out from the
                                           human_code_col before analysis (e.g., ['x', '-9']).
+            save (bool): If True, saves the plot to a file instead of showing.
+            filename (str, optional): The path to save the file to. Required if save is True.
 
         Returns:
             plt.Axes: The matplotlib axes object for further customization.
@@ -524,20 +529,25 @@ class LabelAccuracy:
         plt.ylabel(f"Human Coder ({human_code_col})", fontsize=12)
         plt.xlabel(f"LLM Prediction ({llm_code_col})", fontsize=12)
         plt.tight_layout()
-        plt.show()
+        if save:
+            if not filename:
+                raise ValueError("A filename must be provided when save=True.")
+            plt.close()
+        else:
+            plt.show()
 
         return heatmap
 
     @staticmethod
     def save_output(
-        metadata: dict, eval_result: dict, save_path: str = "../data/"
+        metadata: dict, eval_result: dict, save_path: str = "data/"
     ) -> str:
         """Save evaluation results to files.
 
         Args:
             metadata: dictionary of metadata parameters
             eval_result: dictionary containing evaluation metrics
-            save_path: (str) The folder where results should be saved. Default is "../data/".
+            save_path: (str) The folder where results should be saved. Default is "data/".
 
         Returns:
         -------
