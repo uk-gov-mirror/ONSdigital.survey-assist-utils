@@ -25,9 +25,8 @@ from survey_assist_utils.evaluation.coder_alignment import (
     LabelAccuracy,
 )
 
+
 # --- Tests for LabelAccuracy ---
-
-
 @pytest.fixture
 def sample_data_and_config():  # pylint: disable=redefined-outer-name
     """A pytest fixture to create a standard set of test data and config."""
