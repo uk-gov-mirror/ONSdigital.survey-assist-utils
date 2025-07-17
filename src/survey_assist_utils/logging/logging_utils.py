@@ -7,6 +7,7 @@ import inspect
 import json
 import logging
 import os
+from datetime import datetime
 from typing import Any, Union
 
 # Import cloud logging at module level
@@ -33,6 +34,36 @@ MODULE_NAME_TRUNCATE_LENGTH = 15
 def _get_cloud_logging():
     """Get the cloud logging module if available."""
     return gcp_logging
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that serialises additional Python objects.
+
+    This encoder extends the standard library's JSONEncoder to handle objects
+    such as datetime, ensuring they are serialised in a format suitable for JSON output.
+
+    Attributes:
+        None
+
+    Methods:
+        default(obj): Returns a serialisable version of the object for JSON encoding.
+    """
+
+    def default(self, o: object) -> object:
+        """Return a serialisable version of the object for JSON encoding.
+
+        Args:
+            o (object): The object to serialise.
+
+        Returns:
+            o: A serialisable representation of the object.
+
+        Raises:
+            TypeError: If the object cannot be serialised.
+        """
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return super().default(o)
 
 
 class SurveyAssistLogger:
@@ -154,9 +185,19 @@ class SurveyAssistLogger:
             "message": message,
             "module": module_name,
             "func": func_name,
-            **kwargs,
         }
-        return json.dumps(context)
+        context.update(kwargs)
+
+        try:
+            # If JSON_DEBUG is set, pretty print the context
+            return json.dumps(
+                context,
+                cls=EnhancedJSONEncoder,
+                indent=2 if os.getenv("JSON_DEBUG") else None,
+            )
+        except TypeError as e:
+            context["serialization_error"] = str(e)
+            return json.dumps(context)
 
     def debug(self, message: str, **kwargs) -> None:
         """Log a debug message."""
