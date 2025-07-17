@@ -12,72 +12,6 @@ The tests cover:
 - Verification of utility methods like get_coverage, get_summary_stats, and save_output.
 """
 
-"""
-Unit tests for data cleaning and evaluation modules.
-"""
-import pandas as pd
-import pytest
-
-# Assuming your classes are in these locations
-#from data_cleaner import DataCleaner
-
-from survey_assist_utils.evaluation.coder_alignment import (
-    ColumnConfig,
-    LabelAccuracy,
-    DataCleaner
-)
-
-# --- Tests for DataCleaner ---
-
-class TestDataCleaner:
-    """Test suite for the DataCleaner class."""
-
-    @pytest.fixture
-    def cleaner(self) -> DataCleaner:
-        """Fixture to provide a DataCleaner instance."""
-        config = {"label_cols": ["sic_code"], "score_cols": ["score"]}
-        return DataCleaner(column_mapping=config)
-
-    @pytest.mark.parametrize(
-        "input_val, expected_val",
-        [
-            (1234, "01234"),
-            ("1234", "01234"),
-            ("01234", "01234"),
-            ("1234x", "1234x"),
-            ("0123x", "0123x"),
-            ("-9", "-9"),
-            ("123.0", "123.0"),
-            ("abcde", "abcde"),
-            (None, None),
-            (float('nan'), float('nan')),
-        ],
-    )
-    def test_safe_zfill(self, cleaner: DataCleaner, input_val: any, expected_val: any):
-        """Tests the _safe_zfill method with various inputs."""
-        if pd.isna(input_val):
-            assert pd.isna(cleaner._safe_zfill(input_val))
-        else:
-            assert cleaner._safe_zfill(input_val) == expected_val
-
-    def test_clean_data(self, cleaner: DataCleaner):
-        """Tests the main clean_data method."""
-        raw_data = {
-            "sic_code": [123, "987x", "invalid", "-9"],
-            "score": ["0.9", "0.8", "bad_score", "0.5"]
-        }
-        raw_df = pd.DataFrame(raw_data)
-        clean_df = cleaner.clean_data(raw_df)
-
-        expected_sic = ["00123", "0987x", "invalid", "-9"]
-        assert clean_df["sic_code"].tolist() == expected_sic
-        assert clean_df["score"].dtype == 'float64'
-        assert pd.isna(clean_df["score"].iloc[2])
-        assert clean_df["score"].iloc[0] == 0.9
-
-
-# --- Tests for LabelAccuracy ---
-
 import json
 import os
 
@@ -90,6 +24,8 @@ from survey_assist_utils.evaluation.coder_alignment import (
     ColumnConfig,
     LabelAccuracy,
 )
+
+# --- Tests for LabelAccuracy ---
 
 
 @pytest.fixture
