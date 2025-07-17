@@ -55,6 +55,17 @@ import pandas as pd
 import seaborn as sns
 
 
+# PR comment: Addresses the "too many arguments" linting error by grouping
+# plot-related parameters into a dedicated configuration object.
+@dataclass
+class PlotConfig:
+    """Configuration for plotting functions."""
+
+    figsize: tuple[int, int] = (12, 10)
+    save: bool = False
+    filename: Optional[str] = None
+
+
 @dataclass
 class ColumnConfig:
     """A data structure to hold the name configurations for the analysis."""
@@ -64,6 +75,24 @@ class ColumnConfig:
     clerical_label_cols: list[str]
     id_col: str = "id"
     filter_unambiguous: bool = False
+
+
+@dataclass
+class ConfusionMatrixConfig:
+    """Configuration for the confusion matrix plot.
+
+    Args:
+        human_code_col (str): The column name for the ground truth codes.
+        llm_code_col (str): The column name for the model's predicted codes.
+        top_n (int): The number of most frequent codes to include in the matrix.
+        exclude_patterns (list[str]): A list of substrings to filter out from the
+                human_code_col before analysis (e.g., ['x', '-9']).
+    """
+
+    human_code_col: str
+    llm_code_col: str
+    top_n: int = 10
+    exclude_patterns: Optional[list[str]] = None
 
 
 # The standard character length for a fully-padded SIC code.
@@ -394,23 +423,22 @@ class LabelAccuracy:
     def plot_threshold_curves(
         self,
         thresholds: Optional[list[float]] = None,
-        figsize: tuple[int, int] = (10, 6),
-        save: bool = False,
-        filename: Optional[str] = None,
+        plot_config: Optional[PlotConfig] = None,
     ) -> None:
         """Plot accuracy and coverage curves against confidence threshold.
 
         Args:
             thresholds (list[float], optional): list of threshold values to evaluate.
                 If None, default thresholds will be used.
-            figsize (tuple[int, int], optional): Size of the figure in inches (width, height).
-                Defaults to (10, 6).
-            save (bool): If True, saves the plot to a file instead of showing.
-            filename (str, optional): The path to save the file to. Required if save is True.
+            plot_config (PlotConfig, optional): Configuration for saving and styling the plot.
         """
+        if plot_config is None:
+            plot_config = PlotConfig(
+                figsize=(10, 6)
+            )  # Default size for this specific plot
         stats_df = self.get_threshold_stats(thresholds)
 
-        plt.figure(figsize=figsize)
+        plt.figure(figsize=plot_config.figsize)
         plt.plot(
             stats_df["threshold"],
             stats_df["coverage"],
@@ -430,11 +458,13 @@ class LabelAccuracy:
         plt.legend()
         plt.title("Coverage and Accuracy vs Confidence Threshold")
         plt.tight_layout()
-        if save:
-            if not filename:
-                raise ValueError("A filename must be provided when save=True.")
-            plt.savefig(filename, dpi=300)
-            plt.close()  # Close the plot to prevent it from displaying in some environments
+        if plot_config.save:
+            if not plot_config.filename:
+                raise ValueError(
+                    "A filename must be provided in PlotConfig when save=True."
+                )
+            plt.savefig(plot_config.filename, dpi=300)
+            plt.close()
         else:
             plt.show()
 
@@ -458,56 +488,62 @@ class LabelAccuracy:
             "coverage_above_0.80": self.get_coverage(0.8),
         }
 
-    def plot_confusion_heatmap(  # noqa: PLR0913
+    def plot_confusion_heatmap(
         self,
-        human_code_col: str,
-        llm_code_col: str,
-        top_n: int = 10,
-        exclude_patterns: Optional[list[str]] = None,
+        matrix_config: ConfusionMatrixConfig,
+        plot_config: Optional[PlotConfig] = None,
     ) -> Optional[plt.Axes]:
-        """Generates and displays a confusion matrix heatmap for the top N codes.
+        """Generates a confusion matrix heatmap for the top N codes.
 
         Args:
-            human_code_col (str): The column name for the ground truth codes.
-            llm_code_col (str): The column name for the model's predicted codes.
-            top_n (int): The number of most frequent codes to include in the matrix.
-            exclude_patterns (list[str]): A list of substrings to filter out from the
-                                          human_code_col before analysis (e.g., ['x', '-9']).
-            save (bool): If True, saves the plot to a file instead of showing.
-            filename (str, optional): The path to save the file to. Required if save is True.
+            matrix_config (ConfusionMatrixConfig): Configuration for the matrix data.
+            plot_config (PlotConfig, optional): Configuration for saving and styling the plot.
 
         Returns:
             plt.Axes: The matplotlib axes object for further customization.
         """
-
-        save = False
-        filename = None
+        if plot_config is None:
+            plot_config = PlotConfig()  # Uses the default figsize=(12, 10)
         # --- Step 1: Create a temporary, smaller DataFrame for efficiency ---
-        required_cols = [human_code_col, llm_code_col]
+        required_cols = [matrix_config.human_code_col, matrix_config.llm_code_col]
         if any(col not in self.df.columns for col in required_cols):
             raise ValueError(
                 "One or both specified columns not found in the DataFrame."
             )
 
-        temp_df = self.df[required_cols].copy()
+        temp_df = self.df[
+            [matrix_config.human_code_col, matrix_config.llm_code_col]
+        ].copy()
 
         # --- Step 2: Clean the data by excluding specified patterns ---
-        if exclude_patterns:
+        if matrix_config.exclude_patterns:
             print(f"Initial shape before filtering: {temp_df.shape}")
-            for pattern in exclude_patterns:
+            for pattern in matrix_config.exclude_patterns:
                 temp_df = temp_df[
-                    ~temp_df[human_code_col].str.contains(pattern, na=False)
+                    ~temp_df[matrix_config.human_code_col].str.contains(
+                        pattern, na=False
+                    )
                 ]
             print(f"Shape after filtering: {temp_df.shape}")
 
         # --- Step 3: Find the Most Important Codes to Display ---
-        top_human_codes = temp_df[human_code_col].value_counts().nlargest(top_n).index
-        top_llm_codes = temp_df[llm_code_col].value_counts().nlargest(top_n).index
+        top_human_codes = (
+            temp_df[matrix_config.human_code_col]
+            .value_counts()
+            .nlargest(matrix_config.top_n)
+            .index
+        )
+        top_llm_codes = (
+            temp_df[matrix_config.llm_code_col]
+            .value_counts()
+            .nlargest(matrix_config.top_n)
+            .index
+        )
 
         # Filter the DataFrame to only include rows with these top codes
         filtered_df = temp_df[
-            temp_df[human_code_col].isin(top_human_codes)
-            & temp_df[llm_code_col].isin(top_llm_codes)
+            temp_df[matrix_config.human_code_col].isin(top_human_codes)
+            & temp_df[matrix_config.llm_code_col].isin(top_llm_codes)
         ]
 
         if filtered_df.empty:
@@ -518,24 +554,30 @@ class LabelAccuracy:
 
         # --- Step 4: Create the Confusion Matrix ---
         confusion_matrix = pd.crosstab(
-            filtered_df[human_code_col], filtered_df[llm_code_col]
+            filtered_df[matrix_config.human_code_col],
+            filtered_df[matrix_config.llm_code_col],
         )
 
         # --- Step 5: Visualise as a Heatmap ---
-        plt.figure(figsize=(12, 10))
+        plt.figure(figsize=plot_config.figsize)
         heatmap = sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="YlGnBu")
 
-        plt.title(f"Confusion Matrix: Top {top_n} Human vs. LLM Codes", fontsize=16)
-        plt.ylabel(f"Human Coder ({human_code_col})", fontsize=12)
-        plt.xlabel(f"LLM Prediction ({llm_code_col})", fontsize=12)
+        plt.title(
+            f"Confusion Matrix: Top {matrix_config.top_n} Human vs. LLM Codes",
+            fontsize=16,
+        )
+        plt.ylabel(f"Human Coder ({matrix_config.human_code_col})", fontsize=12)
+        plt.xlabel(f"LLM Prediction ({matrix_config.llm_code_col})", fontsize=12)
         plt.tight_layout()
-        if save:
-            if not filename:
-                raise ValueError("A filename must be provided when save=True.")
+        if plot_config.save:
+            if not plot_config.filename:
+                raise ValueError(
+                    "A filename must be provided in PlotConfig when save=True."
+                )
+            plt.savefig(plot_config.filename, dpi=300)
             plt.close()
         else:
             plt.show()
-
         return heatmap
 
     @staticmethod
