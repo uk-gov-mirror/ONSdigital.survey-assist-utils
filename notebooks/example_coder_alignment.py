@@ -14,10 +14,19 @@
 
 # %%
 """This script gives an example usage of coder_alignment.py."""
-from pathlib import Path
-import pandas as pd
-import numpy as np
 import json
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+# %%
+from survey_assist_utils.evaluation.coder_alignment import (
+    ColumnConfig,
+    ConfusionMatrixConfig,
+    LabelAccuracy,
+    PlotConfig,
+)
 
 # %% [markdown]
 # # Example usage of coder_alignment.py
@@ -25,13 +34,6 @@ import json
 # %% [markdown]
 # ### Load modules
 
-# %%
-from survey_assist_utils.evaluation.coder_alignment import (
-    ColumnConfig,
-    LabelAccuracy,
-    PlotConfig,
-    ConfusionMatrixConfig
-)
 
 # %% [markdown]
 # ### Set up config variables
