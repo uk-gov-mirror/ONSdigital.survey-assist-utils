@@ -53,7 +53,7 @@ def load_config(config_path):
 
 
 # Load configuration from .toml file
-main_config = load_config("/home/user/survey-assist-utils/notebooks/new_config.toml")
+main_config = load_config("prepare_config.toml")
 log_config = main_config.get("logging", {})
 
 # Extract values with defaults
@@ -307,10 +307,11 @@ if __name__ == "__main__":
 
     # Where the input data csv is. We'll use the batch filepath from batch script
     analysis_filepath = main_config["paths"]["batch_filepath"]
+    print("analysis_filepath", analysis_filepath)
 
     # We'll write the post analysis csv here:
     analysis_csv = main_config["paths"]["analysis_csv"]
-
+    print("analysis_csv", analysis_csv)
 
     # Load the data
     sic_dataframe = pd.read_csv(analysis_filepath, delimiter=",", dtype=str)
