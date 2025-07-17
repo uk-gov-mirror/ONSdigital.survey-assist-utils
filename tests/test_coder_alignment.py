@@ -22,7 +22,9 @@ import pytest
 
 from survey_assist_utils.evaluation.coder_alignment import (
     ColumnConfig,
+    ConfusionMatrixConfig,
     LabelAccuracy,
+    PlotConfig,
 )
 
 
@@ -191,26 +193,26 @@ def test_get_summary_stats(
 
 
 def test_plotting_functions_run_without_error(
-    sample_data_and_config, monkeypatch
+    sample_data_and_config: tuple, monkeypatch, tmp_path
 ):  # pylint: disable=redefined-outer-name
     """Tests that plotting functions run without raising an error."""
-    # Use monkeypatch to prevent plt.show() from blocking tests
     monkeypatch.setattr(plt, "show", lambda: None)
-
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
 
-    # The test will fail automatically if any exception is raised.
-    analyzer.plot_threshold_curves()
-    analyzer.plot_confusion_heatmap(
+    # Test plotting with saving enabled
+    plot_conf = PlotConfig(save=True, filename=str(tmp_path / "test_plot.png"))
+
+    # Test threshold curve plot
+    analyzer.plot_threshold_curves(plot_config=plot_conf)
+
+    # Test confusion matrix plot
+    matrix_conf = ConfusionMatrixConfig(
         human_code_col="clerical_label_1", llm_code_col="model_label_1"
     )
-
-    # Test edge case for heatmap where no data overlaps
-    # print a message and return None, not raise an error.
-    analyzer.plot_confusion_heatmap(
-        human_code_col="clerical_label_1", llm_code_col="clerical_label_2"
-    )
+    analyzer.plot_confusion_heatmap(matrix_config=matrix_conf, plot_config=plot_conf)
+    assert plot_conf.filename is not None, "Filename is None"
+    assert os.path.isfile(plot_conf.filename), f"File not found: {plot_conf.filename}"
 
 
 def test_save_output(
