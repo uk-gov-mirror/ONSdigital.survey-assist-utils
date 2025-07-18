@@ -2,7 +2,7 @@
 
 [paths]
 # the original test data is here:
-batch_filepath = "gs://<my-bucket-name>/evaluation_data/e2e_full_test.csv"
+batch_filepath = "gs://<my-bucket-name>/evaluation_data/DSC_Rep_Sample.csv"
 gcs_bucket_name = "<my-bucket-name>"
 evaluation_data = "evaluation_data/"
 
@@ -14,6 +14,9 @@ named_file = "gs://<my-bucket-name>/analysis_outputs/20250620_153641_output.json
 analysis_csv = "gs://<my-bucket-name>/analysis_outputs/added_columns/flags_20250620_153641.csv"
 
 #"gs://<my-bucket-name>/analysis_outputs/added_columns/flags_20250620_153641.csv"
+
+# Merged file store:
+merged_file = "gs://<my-bucket-name>/analysis_outputs/merged_files/merged_flags_20250620_153641.csv"
 
 [parameters]
 # Process only files created on or after this date (YYYYMMDD)
