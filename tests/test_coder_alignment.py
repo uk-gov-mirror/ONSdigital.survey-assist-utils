@@ -97,47 +97,44 @@ def test_get_jaccard_similarity(
     assert analyzer.get_jaccard_similarity() == pytest.approx(0.17, abs=0.01)
 
 
-
 def test_jaccard_similarity_for_single_row():
-    """
-    Tests the Jaccard similarity logic for specific single-row scenarios.
+    """Tests the Jaccard similarity logic for specific single-row scenarios.
     This effectively tests the internal `get_jaccard_row` function.
     """
     # --- Scenario 1: Partial Overlap ---
-    test_data_partial = pd.DataFrame({
-        "id": ["A"],
-        "clerical_1": ["11111"],
-        "clerical_2": ["22222"],
-        "model_1": ["11111"],
-        "model_2": ["33333"],
-        "model_score_1": [0.9],
-        "model_score_2": [0.1],
-    })
+    test_data_partial = pd.DataFrame(
+        {
+            "id": ["A"],
+            "clerical_1": ["11111"],
+            "clerical_2": ["22222"],
+            "model_1": ["11111"],
+            "model_2": ["33333"],
+            "model_score_1": [0.9],
+            "model_score_2": [0.1],
+        }
+    )
     config = ColumnConfig(
         model_label_cols=["model_1", "model_2"],
         clerical_label_cols=["clerical_1", "clerical_2"],
-        model_score_cols=["model_score_1", "model_score_2"], # Add a dummy score column
-        id_col="id"
+        model_score_cols=["model_score_1", "model_score_2"],  # Add a dummy score column
+        id_col="id",
     )
-    print('test_data_partial', test_data_partial)
+    print("test_data_partial", test_data_partial)
 
     analyzer_partial = LabelAccuracy(df=test_data_partial, column_config=config)
     # Expected: Intersection={11111} (size 1), Union={11111, 22222, 33333} (size 3) -> 1/3
-    assert analyzer_partial.get_jaccard_similarity() == pytest.approx(1/3)
-
+    assert analyzer_partial.get_jaccard_similarity() == pytest.approx(1 / 3)
 
     # --- Scenario 2: No Overlap ---
-    test_data_none = pd.DataFrame({
-        "id": ["B"],
-        "clerical_1": ["11111"],
-        "model_1": ["22222"]
-    })
+    test_data_none = pd.DataFrame(
+        {"id": ["B"], "clerical_1": ["11111"], "model_1": ["22222"]}
+    )
     test_data_none["model_score_1"] = [1.0]
     config_none = ColumnConfig(
         model_label_cols=["model_1"],
         clerical_label_cols=["clerical_1"],
-        model_score_cols=["model_score_1"], # Add a dummy score column
-        id_col="id"
+        model_score_cols=["model_score_1"],  # Add a dummy score column
+        id_col="id",
     )
 
     analyzer_none = LabelAccuracy(df=test_data_none, column_config=config_none)
