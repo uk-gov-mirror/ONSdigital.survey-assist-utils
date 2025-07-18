@@ -4,20 +4,19 @@ Class:
         Handles the processing of raw LLM JSON files into a clean DataFrame.
 
 Methods:
-    get_local_filepaths
-        Gets a list of local filepaths to process based on config.
-
+    get_gcs_filepaths
+        Gets a list of GCS filepaths to process based on config. Can operate
+        in single-file or directory mode.
     record_count
-
+        Counts records in a JSON file.
     flatten_llm_json_to_dataframe
-
+        Flattens a JSON file into a pandas DataFrame.
     count_all_records
-
+        Counts total records across all specified files.
     process_files
-
+        Processes all specified JSON files into a single DataFrame.
     merge_eval_data
-
-
+        Merges the processed data with external evaluation data.
 """
 
 import json
@@ -50,7 +49,32 @@ class JsonPreprocessor:
         self.storage_client = storage.Client()
 
     def get_gcs_filepaths(self) -> list[str]:
-        """Gets a list of GCS filepaths to process based on config, excluding sub-directories."""
+        """
+        Gets a list of GCS filepaths to process based on config.
+
+        Operates in one of two modes based on the 'single_file' parameter:
+        1. Single File Mode: If 'single_file' is "True", it processes the
+           single file specified in 'paths.named_file'.
+        2. Directory Mode: Otherwise, it finds all files in 'paths.gcs_json_dir'
+           created on or after 'parameters.date_since'.
+        """
+        # Check if single_file mode is enabled in the config
+        is_single_file_mode = (
+            self.config.get("parameters", {}).get("single_file", "False").lower()
+            == "true"
+        )
+
+        if is_single_file_mode:
+            named_file = self.config.get("paths", {}).get("named_file")
+            if not named_file:
+                logging.error(
+                    "Single file mode is enabled, but 'named_file' path is missing from config."
+                )
+                return []
+            logging.info("Single file mode enabled. Processing: %s", named_file)
+            return [named_file]
+
+        # --- Fallback to original directory processing mode ---
         bucket_name = self.config["paths"]["gcs_bucket_name"]
         prefix = self.config["paths"]["gcs_json_dir"]
         date_str = self.config["parameters"]["date_since"]
@@ -61,7 +85,7 @@ class JsonPreprocessor:
 
         later_files = []
         logging.info(
-            "Searching for files in gs://%s/%s on or after %s",
+            "Directory mode: Searching for files in gs://%s/%s on or after %s",
             bucket_name,
             prefix,
             date_str,
