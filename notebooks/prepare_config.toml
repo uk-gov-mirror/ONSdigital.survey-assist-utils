@@ -8,12 +8,16 @@ evaluation_data = "evaluation_data/"
 
 # The Docker run puts the data here
 gcs_json_dir = "analysis_outputs/"
+named_file = "gs://<my-bucket-name>/analysis_outputs/20250620_153641_output.json"
 
 # After running 'add_data_quality_flags', the helper columns will be written to here:
-analysis_csv = "gs://<my-bucket-name>/analysis_outputs/added_columns/flags_e2e_full_test.csv"
+analysis_csv = "gs://<my-bucket-name>/analysis_outputs/added_columns/flags_20250620_153641.csv"
+
+#"gs://<my-bucket-name>/analysis_outputs/added_columns/flags_20250620_153641.csv"
 
 [parameters]
 # Process only files created on or after this date (YYYYMMDD)
+single_file = "True"
 date_since = "20250710"
 
 [json_keys]
