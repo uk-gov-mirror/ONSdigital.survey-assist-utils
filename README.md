@@ -80,7 +80,7 @@ Pytest is used for testing.
     make all-tests
     ```
 
-# Survey Assist SIC LLM - Evaluation Methodology
+# Methodology for evaluating alignment between clerical coders and Survey Assist outputs
 
 ## Overview
 
