@@ -86,6 +86,10 @@ Pytest is used for testing.
 
 This repository provides a framework for processing batches of survey data through the Survey Assist system and evaluating the quality of the LLM's SIC code classifications. The process starts with a labelled set of survey data and ends with a detailed performance analysis.
 
+## The Data
+The source of the data is TLFS sets of labelled data that have been annotated by expert coders. 
+The annotation isn't required for the processing, only for the evaluation.
+
 ## The Evaluation Workflow
 
 The end-to-end process is handled by a series of scripts that form a data pipeline:
@@ -97,13 +101,13 @@ The end-to-end process is handled by a series of scripts that form a data pipeli
 
 2.  **Stage 2: Data Preparation (`prepare_evaluation_data_for_analysis.py`)**
     * **Input:** The original, human-coded dataset.
-    * **Process:** This script enriches the original data by adding a series of data quality flags. It analyzes the human-coded SICs to determine if a response is complete, ambiguous, or requires special handling.
+    * **Process:** This script enriches the original data by adding a series of data quality flags. It analyses the human-coded SICs to determine if a response is complete, ambiguous, or requires special handling.
     * **Output:** An enriched CSV file with additional metadata columns (e.g., `Unambiguous`, `Match_5_digits`).
 
 3.  **Stage 3: Performance Analysis (`coder_alignment.py`)**
     * **Input:** A merged DataFrame containing both the raw LLM output from Stage 1 and the enriched human-coded data from Stage 2.
     * **Process:** The `LabelAccuracy` class takes this combined data and calculates a suite of metrics to measure the alignment between the LLM's suggestions and the human-provided ground truth.
-    * **Output:** Quantitative metrics and visualizations (e.g., heatmaps, charts) that summarize the model's performance.
+    * **Output:** Quantitative metrics and visualizations (e.g., heatmaps, charts) that summarise the model's performance.
 
 ## Human Coder Alignment
 
