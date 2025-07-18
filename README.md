@@ -4,179 +4,118 @@ Utilities used as part of Survey Assist API or UI
 
 ## Overview
 
-Survey Assist utility functions. These are common pieces of functionality that can be used by the UI or API.
+Survey Assist utility functions. These are common pieces of functionality that can be used by the UI or API, with a primary focus on providing a framework for batch processing and evaluating LLM-based SIC code classification.
 
 ## Features
 
-- Generate a JWT token for authenticating to the API
+* **JWT Token Generation:** Authenticate to the Survey Assist API.
+* **Batch Processing:** Send large datasets to the API for SIC classification.
+* **Data Enrichment:** Add data quality and metadata flags to datasets.
+* **Performance Evaluation:** A comprehensive suite of metrics to analyze and compare LLM performance against human coders.
 
-## Prerequisites
-
-Ensure you have the following installed on your local machine:
-
-- [ ] Python 3.12 (Recommended: use `pyenv` to manage versions)
-- [ ] `poetry` (for dependency management)
-- [ ] Colima (if running locally with containers)
-- [ ] Terraform (for infrastructure management)
-- [ ] Google Cloud SDK (`gcloud`) with appropriate permissions
-
-### Local Development Setup
+## Local Development & Setup
 
 The Makefile defines a set of commonly used commands and workflows.  Where possible use the files defined in the Makefile.
 
-#### Clone the repository
+### Prerequisites
 
-```bash
-git clone https://github.com/ONSdigital/survey-assist-utils.git
-cd survey-assist-utils
-```
+Ensure you have the following installed on your local machine:
 
-#### Install Dependencies
+* Python 3.12 (Recommended: use `pyenv` to manage versions)
+* `poetry` (for dependency management)
+* Google Cloud SDK (`gcloud`) with appropriate permissions
+* Colima (if running locally with containers)
+* Terraform (for infrastructure management)
 
-```bash
-poetry install
-```
+### Setup Instructions
 
-#### Run the Token Generator Locally
+1.  **Clone the repository**
+    ```bash
+    git clone [https://github.com/ONSdigital/survey-assist-utils.git](https://github.com/ONSdigital/survey-assist-utils.git)
+    cd survey-assist-utils
+    ```
 
-Set the following environment variables
+2.  **Install Dependencies**
+    ```bash
+    poetry install
+    ```
 
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/GCP_CREDENTIALS.json"
-export SA_EMAIL="GCP-SERVICE-ACCOUNT@SERVICE-ACCOUNT-ID.iam.gserviceaccount.com"
-export JWT_SECRET=/path/to/GCP/secret.json
-```
+3.  **Generate an API Token**
+    Set the required environment variables:
+    ```bash
+    export GOOGLE_APPLICATION_CREDENTIALS="/path/to/GCP_CREDENTIALS.json"
+    export SA_EMAIL="GCP-SERVICE-ACCOUNT@SERVICE-ACCOUNT-ID.iam.gserviceaccount.com"
+    export JWT_SECRET=/path/to/GCP/secret.json
+    ```
+    Then, run the make command:
+    ```bash
+    make generate-api-token
+    ```
 
-To generate an API token execute:
-
-```bash
-make generate-api-token
-```
-
-### GCP Setup
-
-Placeholder
+## Code Quality & Testing
 
 ### Code Quality
 
-Code quality and static analysis will be enforced using isort, black, ruff, mypy and pylint. Security checking will be enhanced by running bandit.
+Code quality and static analysis are enforced using `isort`, `black`, `ruff`, `mypy`, `pylint`, and `bandit`.
 
-To check the code quality, but only report any errors without auto-fix run:
-
-```bash
-make check-python-nofix
-```
-
-To check the code quality and automatically fix errors where possible run:
-
-```bash
-make check-python
-```
-
-### Documentation
-
-Documentation is available in the docs folder and can be viewed using mkdocs
-
-```bash
-make run-docs
-```
+* **To check for errors without auto-fixing:**
+    ```bash
+    make check-python-nofix
+    ```
+* **To check and automatically fix errors:**
+    ```bash
+    make check-python
+    ```
 
 ### Testing
 
-Pytest is used for testing alongside pytest-cov for coverage testing.  [/tests/conftest.py](/tests/conftest.py) defines config used by the tests.
+Pytest is used for testing.
 
-Unit testing for utility functions is added to the [/tests/tests_utils.py](./tests/tests_utils.py)
-
-```bash
-make unit-tests
-```
-
-All tests can be run using
-
-```bash
-make all-tests
-```
-
-### Environment Variables
-
-Placeholder
+* **To run unit tests:**
+    ```bash
+    make unit-tests
+    ```
+* **To run all tests:**
+    ```bash
+    make all-tests
+    ```
 
 # Survey Assist SIC LLM - Evaluation Methodology
-The purpose behind this repo.
 
 ## Overview
 
-The purpose of this repo is to provide a framework processing batches of data through the Survey Assist System and evaluating the responses. 
-Starting from a labelled set of survey data, the LLM is prompted to assign a SIC code when given the survey respondents’ answers to questions about employment.
-The LLM’s output consists of a set of ranked candidate SIC codes and their associated likelihood scores. 
-The accuracy and evaluation of these responses are assessed by the metrics in the evaluation modules in this repo.
+This repository provides a framework for processing batches of survey data through the Survey Assist system and evaluating the quality of the LLM's SIC code classifications. The process starts with a labelled set of survey data and ends with a detailed performance analysis.
 
-The analysis is performed by the `LabelAccuracy` class, which takes a DataFrame and a `ColumnConfig` object defining which columns to use for the evaluation.
+## The Evaluation Workflow
+
+The end-to-end process is handled by a series of scripts that form a data pipeline:
+
+1.  **Stage 1: Batch Processing (`process_tlfs_evaluation_data.py`)**
+    * **Input:** A CSV file containing survey responses (e.g., job title, industry description).
+    * **Process:** This script iterates through the input data, sending each record to the Survey Assist API to be classified by the LLM.
+    * **Output:** A JSON file containing the raw LLM responses, including the list of candidate SIC codes and likelihood scores for each survey record.
+
+2.  **Stage 2: Data Preparation (`prepare_evaluation_data_for_analysis.py`)**
+    * **Input:** The original, human-coded dataset.
+    * **Process:** This script enriches the original data by adding a series of data quality flags. It analyzes the human-coded SICs to determine if a response is complete, ambiguous, or requires special handling.
+    * **Output:** An enriched CSV file with additional metadata columns (e.g., `Unambiguous`, `Match_5_digits`).
+
+3.  **Stage 3: Performance Analysis (`coder_alignment.py`)**
+    * **Input:** A merged DataFrame containing both the raw LLM output from Stage 1 and the enriched human-coded data from Stage 2.
+    * **Process:** The `LabelAccuracy` class takes this combined data and calculates a suite of metrics to measure the alignment between the LLM's suggestions and the human-provided ground truth.
+    * **Output:** Quantitative metrics and visualizations (e.g., heatmaps, charts) that summarize the model's performance.
 
 ## Human Coder Alignment
 
-* **Dateset** A 2,000-record broadly representative sample from across all SIC sections, containing expert SIC assignments.
-
-### Unambiguous Responses Subset
-
-When a human coder provides only a single, complete 5-digit SIC code, the response is considered "Unambiguous." This subset is used for specific tests by setting the `filter_unambiguous=True` flag in the `ColumnConfig`, which provides a clean baseline for model performance.
+* **Dataset:** The evaluation is performed against a 2,000-record sample from across all SIC sections, containing expert SIC assignments.
+* **Unambiguous Subset:** A key part of the analysis focuses on "Unambiguous" responses, where a human coder provided only a single, complete 5-digit SIC code. This provides a clean baseline for model performance and can be enabled via a flag in the `ColumnConfig`.
 
 ## Core Evaluation Metrics
 
-### Module coder_alignment.py
+The `coder_alignment` module provides several key metrics to assess performance from different angles:
 
-* by setting the @dataclass ColumnConfig we can set up alignment tests for any CC column to any SA column, for either Unambiguous, or all, allowing an N*M check of alignment.
-
-### Metric 1: Match Accuracy
-
-* **Purpose:** To measure how often any of the model's suggested codes match any of the codes provided by the human coder.
-
-* **Business Need:** This is the primary measure of success. It tells us how often the model provides a correct answer within its suggestion list.
-
-* **Approach:** The `get_accuracy()` method calculates this. It creates a boolean flag (`is_correct`) for each row, which is `True` if any code in the `model_label_cols` exists in the `clerical_label_cols`. The final metric is the percentage of `True` values. This can be calculated for both full 5-digit matches and partial 2-digit matches.
-
-* **How it will be used:** This will be the main KPI for tracking overall model performance. It will also be used in conjunction with confidence scores (via the `get_threshold_stats()` method) to understand the trade-off between accuracy and automation coverage.
-
-* This method is configurable to two digits or five digits of match. 
-
-### Metric 2: Jaccard Similarity
-
-* **Purpose:** To measure the quality and relevance of the entire suggestion list, not just the presence of a single correct answer.
-
-* **Business Need:** A high accuracy score could still come from a noisy list (e.g., one correct code among four bad ones). The Jaccard score tells us how "clean" the suggestion list is. A high score means the model's suggestions closely mirror the human coder's choices.
-
-* **Approach:** The `get_jaccard_similarity()` method calculates the average Jaccard Index (Intersection over Union) between the set of model codes and the set of clerical codes for each row.
-
-* **How it will be used:** This metric provides a more nuanced view of performance. It will be used to evaluate if changes to prompts are making the suggestion lists more relevant and less noisy, which improves the user experience for the human coder.
-
-### Metric 3: Candidate Contribution
-
-* **Purpose:** To assess the "value add" of each individual candidate column (e.g., `candidate_3_sic_code`, `candidate_5_sic_code`).
-
-* **Business Need:** This helps us decide if providing a long list of 5 candidates is useful or if a shorter list would be better. It answers the question: "How often does the 5th suggestion actually provide the correct answer?"
-
-* **Approach:** The `get_candidate_contribution()` method is called for a specific candidate column. It calculates two things:
-
-  1. How often that candidate matches the *primary* human code (`sic_ind_occ1`).
-
-  2. How often that candidate matches *any* of the human codes.
-
-* **How it will be used:** The results will inform decisions about the user interface (e.g., should we only show the top 3 candidates?) and guide efforts to improve the model's ranking ability.
-
-### Metric 4: Confusion Matrix Heatmap
-
-* **Purpose:** To visually identify systematic patterns of confusion between the model and human coders.
-
-* **Business Need:** A single accuracy number doesn't tell us *what kind* of mistakes the model is making. A heatmap instantly reveals if the model consistently confuses two specific codes (e.g., wholesale vs. retail).
-
-* **Approach:** The `plot_confusion_heatmap()` method creates a frequency table comparing the primary human code against the primary model code for the most common codes in the dataset, and displays it as a heatmap.
-
-* **How it will be used:** This is a critical diagnostic tool. It will be used to identify specific "pitfalls" and provide concrete examples to guide prompt engineering and model fine-tuning.
-
-## Other Analyses
-
-* **Coder Type Differences:** The dataset can be segmented by the type of human coder (e.g., KB, CC, MC). The `LabelAccuracy` class can be instantiated for each subset to compare performance and identify any inconsistencies in human coding, if appropriated filtered.
-
-* **Stability Testing:** This module can be used to provide feedback for whether changes in the system result in improvements or not by re-running against the dataset.
-
-* **plot_threshold_curves** This plots the rate of confidence against coverage. It is an optinoal extra to assist in the evaluation.
+* **Match Accuracy:** This is the primary KPI, measuring how often a correct code appears anywhere in the model's suggestion list. It provides a top-level view of whether the model is providing useful answers.
+* **SJaccard Similarity:** This metric is to measure the overall relevance of the suggestion list. It helps determine if the model's suggestions are closely align with the human coder's choices
+* **Candidate Ranking & Contribution:** This analysis assesses the value of each individual suggestion (e.g., the 3rd or 5th candidate). It helps answer business questions about the optimal number of suggestions to display to a user.
+* **Error Pattern Analysis (Confusion Matrix):** This provides a visual heatmap to diagnose systematic errors. It shows if the model consistently confuses two specific codes, and is used for prompt engineering and model improvement.
+* **Confidence vs. Coverage Analysis:** The framework includes tools to plot model confidence scores against accuracy and coverage, showing the trade-off for confidence at various levels.
