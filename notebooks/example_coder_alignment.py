@@ -45,10 +45,6 @@ model_label_cols = [f"SA_{i}" for i in range(1, 6)]
 model_score_cols = [f"SA_score_{i}" for i in range(1, 6)]
 clerical_label_cols = [f"CC_{i}" for i in range(1, 4)]
 
-model_label_cols = [f"candidate_{i}_sic_code" for i in range(1, 6)]
-model_score_cols = [f"candidate_{i}_likelihood" for i in range(1, 6)]
-clerical_label_cols = [f"sic_ind_occ{i}" for i in range(1, 4)]
-
 config_main = ColumnConfig(
     model_label_cols=model_label_cols,
     model_score_cols=model_score_cols,
@@ -60,10 +56,14 @@ config_main = ColumnConfig(
 
 # %% [markdown]
 # ### Test All
+#
+# With this dataset, the expected accuracy with a threshold >= 0.1 is 43.59%
+# For threshold at 0.5, accuracy is 34.8%
+# At 0.9, it is 40%
 
 # %%
 # Note, this presumes that this file is run from survey-assist-utils/notebooks
-relative_path = Path("e2e_test.csv")
+relative_path = Path("../data/artificial_data/unit_test_all.csv")
 df = pd.read_csv(relative_path, dtype=str)
 
 analyzer_main = LabelAccuracy(df=df, column_config=config_main)
