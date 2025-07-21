@@ -14,6 +14,7 @@
 
 # %%
 """Runs to test JsonProcessor."""
+from typing import TypedDict
 
 import pandas as pd
 import toml
@@ -22,6 +23,73 @@ from IPython.display import Markdown, display
 
 from survey_assist_utils.evaluation.coder_alignment import ColumnConfig, LabelAccuracy
 from survey_assist_utils.evaluation.preprocessor import JsonPreprocessor
+
+# %% [markdown]
+#
+# This script includes all the metrics required for the PPT presentation as follows:
+#
+# 1) Observations in labelled set.
+# 2) Variability across SIC sections.
+# 3) Match of top CC vs top SA on unambiguously Codable - 2 digis, 5 digit.
+# 4) Match of top CC vs any SA on unambiguously codable - 2 digis, 5 digit.
+# 5) Match rate top CC vs any SA on all data - 2 digis, 5 digit.
+# 6) Match rate any CC vs any SA on all data - 2 digis, 5 digit.
+# 7) Jaccard's Score all CC vs all SA, all data - 2 digis, 5 digit.
+
+# %%
+
+
+# Define the metrics to run:
+class TestCase(TypedDict):
+    """Represents a single test case configuration for evaluating model behavior.
+
+    Attributes:
+        Test (str): A descriptive label or name for the test scenario.
+        CCs (list[int]): A list of content classifier (CC) identifiers used in the test.
+        LLMs (list[int]): A list of large language model (LLM) identifiers used in the test.
+        Unambiguous (bool): Indicates whether the test scenario is unambiguous (True) or
+        ambiguous (False).
+    """
+
+    Test: str
+    CCs: list[int]
+    LLMs: list[int]
+    Unambiguous: bool
+
+
+test_cases: list[TestCase] = [
+    {
+        "Test": "Match of top CC vs top SA on unambiguously Codable",
+        "CCs": [1],
+        "LLMs": [1],
+        "Unambiguous": True,
+    },  # 3) Match of top CC vs top SA on unambiguously Codable - 2 digis, 5 digit.
+    {
+        "Test": "Match of top CC vs any SA on unambiguously codable",
+        "CCs": [1],
+        "LLMs": [5],
+        "Unambiguous": True,
+    },  # 4) Match of top CC vs any SA on unambiguously codable - 2 digis, 5 digit.
+    {
+        "Test": "Match rate top CC vs any SA on all data",
+        "CCs": [1],
+        "LLMs": [5],
+        "Unambiguous": False,
+    },  # 5) Match rate top CC vs any SA on all data - 2 digis, 5 digit.
+    {
+        "Test": "Match rate any CC vs any SA on all data",
+        "CCs": [3],
+        "LLMs": [5],
+        "Unambiguous": False,
+    },  # 6) Match rate any CC vs any SA on all data - 2 digis, 5 digit.
+    {
+        "Test": "Jaccard's Score all CC vs all SA, all data",
+        "CCs": [3],
+        "LLMs": [5],
+        "Unambiguous": False,
+    },  # 7) Jaccard's Score all CC vs all SA, all data - 2 digis, 5 digit.
+]
+
 
 # %%
 
@@ -94,8 +162,11 @@ config["paths"]["processed_csv_output"] = config["paths"]["analysis_csv"]
 preprocessor = JsonPreprocessor(config)
 
 # %%
+config["paths"]["processed_csv_output"]
+
+# %%
 record_count = preprocessor.count_all_records()
-print("record_count", record_count)  # we expect 10
+print("record_count", record_count)  # we expect 2079
 
 llm_processed_df = preprocessor.process_files()
 print("llm_processed_df shape", llm_processed_df.shape)
@@ -106,74 +177,69 @@ full_output_df = preprocessor.merge_eval_data(llm_processed_df)
 print("full_output_df shape", full_output_df.shape)
 
 # %%
-full_output_df.to_csv("full_output_df.csv")
+merged_file = config["paths"]["merged_file"]
+full_output_df.to_csv(merged_file)
+
 
 # %%
-
-
 model_label_cols = [f"candidate_{i}_sic_code" for i in range(1, 6)]
 model_score_cols = [f"candidate_{i}_likelihood" for i in range(1, 6)]
 clerical_label_cols = [f"sic_ind_occ{i}" for i in range(1, 4)]
 
-config_main = ColumnConfig(
-    model_label_cols=model_label_cols,
-    model_score_cols=model_score_cols,
-    clerical_label_cols=clerical_label_cols,
-    id_col="unique_id",
-    filter_unambiguous=False,
-)
 
-analyzer = LabelAccuracy(df=full_output_df, column_config=config_main)
+if full_output_df is not None:
+    for case in test_cases:
+        print(case)
+        cc_count = case["CCs"][0]
+        llm_count = case["LLMs"][0]
+        print(llm_count)
+        config_main = ColumnConfig(
+            model_label_cols=model_label_cols[:llm_count],
+            model_score_cols=model_score_cols[:llm_count],
+            clerical_label_cols=clerical_label_cols[:cc_count],
+            id_col="unique_id",
+            filter_unambiguous=case["Unambiguous"],
+        )
+        print(case["Test"])
 
-# %%
+        # Initialize the analyzer with the subset and config
+        analyzer_main = LabelAccuracy(df=full_output_df, column_config=config_main)
 
-full_acc_stats = analyzer.get_accuracy(match_type="full", extended=True)
-if not isinstance(full_acc_stats, dict):
-    raise TypeError("Expected a dictionary from get_accuracy when extended=True")
+        full_acc_stats = analyzer_main.get_accuracy(match_type="full", extended=True)
+        if not isinstance(full_acc_stats, dict):
+            raise TypeError(
+                "Expected a dictionary from get_accuracy when extended=True"
+            )
+        print("full_acc_stats", full_acc_stats)
 
-digit_acc_stats = analyzer.get_accuracy(match_type="2-digit", extended=True)
-if not isinstance(digit_acc_stats, dict):
-    raise TypeError("Expected a dictionary from get_accuracy when extended=True")
+        digit_acc_stats = analyzer_main.get_accuracy(
+            match_type="2-digit", extended=True
+        )
+        if not isinstance(digit_acc_stats, dict):
+            raise TypeError(
+                "Expected a dictionary from get_accuracy when extended=True"
+            )
+        print("digit_acc_stats", digit_acc_stats)
 
-# Get the overall coverage
-coverage = analyzer.get_coverage()
 
-# Get the detailed summary stats dictionary
-summary_stats = analyzer.get_summary_stats()
+jaccard_results = analyzer_main.get_jaccard_similarity()
+print("jaccard_results", jaccard_results)
 
-# 2. Combine all results into a single, detailed dictionary
-# Unpack the dictionaries from get_accuracy with descriptive prefixes
-results = {
-    # --- Full Match Stats ---
-    "accuracy_full_match_percent": full_acc_stats["accuracy_percent"],
-    "full_match_count": full_acc_stats["matches"],
-    "full_match_unmatched": full_acc_stats["non_matches"],
-    "full_match_total_considered": full_acc_stats["total_considered"],
-    # --- 2-Digit Match Stats ---
-    "accuracy_2_digit_match_percent": digit_acc_stats["accuracy_percent"],
-    "2_digit_match_count": digit_acc_stats["matches"],
-    "2_digit_match_unmatched": digit_acc_stats["non_matches"],
-    "2_digit_match_total_considered": digit_acc_stats["total_considered"],
-    # --- Other Stats ---
-    "overall_coverage_percent": f"{coverage:.1f}",
-    **summary_stats,  # Unpack the rest of the summary stats
-}
-print(results)
 
-# %%
+jaccard_2_digit_score = analyzer_main.get_jaccard_similarity(match_type="2-digit")
+print("jaccard_2_digit_score", jaccard_2_digit_score)
+
 # Implement testing
-analyzer.plot_threshold_curves()
+analyzer_main.plot_threshold_curves()
 
-# %%
-analyzer.plot_confusion_heatmap(
-    human_code_col=analyzer.config.clerical_label_cols[0],
-    llm_code_col=analyzer.config.model_label_cols[0],
+analyzer_main.plot_confusion_heatmap(
+    human_code_col=analyzer_main.config.clerical_label_cols[0],
+    llm_code_col=analyzer_main.config.model_label_cols[0],
     top_n=10,
-    exclude_patterns=["x", "-9"],
+    exclude_patterns=["x", "-9", "4+"],
 )
 
-# %%
 
 display(Markdown("### Summary Statistics Dictionary"))
-summary_stats = analyzer.get_summary_stats()
+summary_stats = analyzer_main.get_summary_stats()
 display(pd.Series(summary_stats, name="Value").to_frame())
