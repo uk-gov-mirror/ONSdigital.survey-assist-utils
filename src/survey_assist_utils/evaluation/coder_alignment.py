@@ -243,23 +243,32 @@ class LabelAccuracy:
             self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
         self.df["max_score"] = self.df[self.model_score_cols].max(axis=1)
 
-    def get_jaccard_similarity(self) -> float:
+    def get_jaccard_similarity(self, match_type: str = "full") -> float:
         """Calculates the average Jaccard Similarity Index across all rows."""
+        # Determine the length to slice the codes based on match_type
+        match_len = 2 if match_type == "2-digit" else 5
 
         def calculate_jaccard_for_row(row):
-            model_set = set(row[self.model_label_cols].dropna())
-            clerical_set = set(row[self.clerical_label_cols].dropna())
+            # The change is here: slice each code to the desired length
+            model_set = {
+                str(val)[:match_len]
+                for val in row[self.model_label_cols].dropna()
+                if val not in self._MISSING_VALUE_FORMATS
+            }
+            clerical_set = {
+                str(val)[:match_len]
+                for val in row[self.clerical_label_cols].dropna()
+                if val not in self._MISSING_VALUE_FORMATS
+            }
 
             if not model_set and not clerical_set:
                 return 1.0
 
-            intersection_size = len(model_set.intersection(clerical_set))
-            union_size = len(model_set.union(clerical_set))
-
-            return intersection_size / union_size if union_size > 0 else 0.0
+            intersection = len(model_set.intersection(clerical_set))
+            union = len(model_set.union(clerical_set))
+            return intersection / union if union > 0 else 0.0
 
         jaccard_scores = self.df.apply(calculate_jaccard_for_row, axis=1)
-
         return jaccard_scores.mean()
 
     def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
