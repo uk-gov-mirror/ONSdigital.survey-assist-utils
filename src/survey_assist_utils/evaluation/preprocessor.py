@@ -49,8 +49,7 @@ class JsonPreprocessor:
         self.storage_client = storage.Client()
 
     def get_gcs_filepaths(self) -> list[str]:
-        """
-        Gets a list of GCS filepaths to process based on config.
+        """Gets a list of GCS filepaths to process based on config.
 
         Operates in one of two modes based on the 'single_file' parameter:
         1. Single File Mode: If 'single_file' is "True", it processes the
