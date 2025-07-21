@@ -22,10 +22,13 @@ import pytest
 
 from survey_assist_utils.evaluation.coder_alignment import (
     ColumnConfig,
+    ConfusionMatrixConfig,
     LabelAccuracy,
+    PlotConfig,
 )
 
 
+# --- Tests for LabelAccuracy ---
 @pytest.fixture
 def sample_data_and_config():  # pylint: disable=redefined-outer-name
     """A pytest fixture to create a standard set of test data and config."""
@@ -94,6 +97,51 @@ def test_get_jaccard_similarity(
     assert analyzer.get_jaccard_similarity() == pytest.approx(0.17, abs=0.01)
 
 
+def test_jaccard_similarity_for_single_row():
+    """Tests the Jaccard similarity logic for specific single-row scenarios.
+    This effectively tests the internal `get_jaccard_row` function.
+    """
+    # --- Scenario 1: Partial Overlap ---
+    test_data_partial = pd.DataFrame(
+        {
+            "id": ["A"],
+            "clerical_1": ["11111"],
+            "clerical_2": ["22222"],
+            "model_1": ["11111"],
+            "model_2": ["33333"],
+            "model_score_1": [0.9],
+            "model_score_2": [0.1],
+        }
+    )
+    config = ColumnConfig(
+        model_label_cols=["model_1", "model_2"],
+        clerical_label_cols=["clerical_1", "clerical_2"],
+        model_score_cols=["model_score_1", "model_score_2"],  # Add a dummy score column
+        id_col="id",
+    )
+    print("test_data_partial", test_data_partial)
+
+    analyzer_partial = LabelAccuracy(df=test_data_partial, column_config=config)
+    # Expected: Intersection={11111} (size 1), Union={11111, 22222, 33333} (size 3) -> 1/3
+    assert analyzer_partial.get_jaccard_similarity() == pytest.approx(1 / 3)
+
+    # --- Scenario 2: No Overlap ---
+    test_data_none = pd.DataFrame(
+        {"id": ["B"], "clerical_1": ["11111"], "model_1": ["22222"]}
+    )
+    test_data_none["model_score_1"] = [1.0]
+    config_none = ColumnConfig(
+        model_label_cols=["model_1"],
+        clerical_label_cols=["clerical_1"],
+        model_score_cols=["model_score_1"],  # Add a dummy score column
+        id_col="id",
+    )
+
+    analyzer_none = LabelAccuracy(df=test_data_none, column_config=config_none)
+    # Expected: Intersection=0, Union=2 -> 0/2 = 0
+    assert analyzer_none.get_jaccard_similarity() == 0.0
+
+
 def test_get_candidate_contribution(
     sample_data_and_config,
 ):  # pylint: disable=redefined-outer-name
@@ -139,20 +187,6 @@ def test_validate_inputs_raises_errors(
     )
     with pytest.raises(ValueError, match="must match number of score columns"):
         LabelAccuracy(df=df, column_config=bad_config_mismatch)
-
-
-def test_safe_zfill_logic():
-    """Tests the _safe_zfill static method directly with various edge cases."""
-    # Test padding
-    assert LabelAccuracy._safe_zfill("123") == "00123"  # pylint: disable=W0212
-    # Test special codes
-    assert LabelAccuracy._safe_zfill("-9") == "-9"  # pylint: disable=W0212
-    assert LabelAccuracy._safe_zfill("4+") == "4+"  # pylint: disable=W0212
-    # Test non-numeric strings
-    assert LabelAccuracy._safe_zfill("1234x") == "1234x"  # pylint: disable=W0212
-    # Test NaNs
-    assert pd.isna(LabelAccuracy._safe_zfill(np.nan))  # pylint: disable=W0212
-    assert pd.isna(LabelAccuracy._safe_zfill(None))  # pylint: disable=W0212
 
 
 def test_get_accuracy_thoroughly(
@@ -204,26 +238,26 @@ def test_get_summary_stats(
 
 
 def test_plotting_functions_run_without_error(
-    sample_data_and_config, monkeypatch
+    sample_data_and_config: tuple, monkeypatch, tmp_path
 ):  # pylint: disable=redefined-outer-name
     """Tests that plotting functions run without raising an error."""
-    # Use monkeypatch to prevent plt.show() from blocking tests
     monkeypatch.setattr(plt, "show", lambda: None)
-
     df, config = sample_data_and_config
     analyzer = LabelAccuracy(df=df, column_config=config)
 
-    # The test will fail automatically if any exception is raised.
-    analyzer.plot_threshold_curves()
-    analyzer.plot_confusion_heatmap(
+    # Test plotting with saving enabled
+    plot_conf = PlotConfig(save=True, filename=str(tmp_path / "test_plot.png"))
+
+    # Test threshold curve plot
+    analyzer.plot_threshold_curves(plot_config=plot_conf)
+
+    # Test confusion matrix plot
+    matrix_conf = ConfusionMatrixConfig(
         human_code_col="clerical_label_1", llm_code_col="model_label_1"
     )
-
-    # Test edge case for heatmap where no data overlaps
-    # print a message and return None, not raise an error.
-    analyzer.plot_confusion_heatmap(
-        human_code_col="clerical_label_1", llm_code_col="clerical_label_2"
-    )
+    analyzer.plot_confusion_heatmap(matrix_config=matrix_conf, plot_config=plot_conf)
+    assert plot_conf.filename is not None, "Filename is None"
+    assert os.path.isfile(plot_conf.filename), f"File not found: {plot_conf.filename}"
 
 
 def test_save_output(

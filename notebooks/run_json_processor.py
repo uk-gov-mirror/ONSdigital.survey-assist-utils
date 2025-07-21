@@ -21,7 +21,12 @@ import toml
 from google.cloud import storage
 from IPython.display import Markdown, display
 
-from survey_assist_utils.evaluation.coder_alignment import ColumnConfig, LabelAccuracy
+from survey_assist_utils.evaluation.coder_alignment import (
+    ColumnConfig,
+    ConfusionMatrixConfig,
+    LabelAccuracy,
+    PlotConfig,
+)
 from survey_assist_utils.evaluation.preprocessor import JsonPreprocessor
 
 # %% [markdown]
@@ -162,9 +167,6 @@ config["paths"]["processed_csv_output"] = config["paths"]["analysis_csv"]
 preprocessor = JsonPreprocessor(config)
 
 # %%
-config["paths"]["processed_csv_output"]
-
-# %%
 record_count = preprocessor.count_all_records()
 print("record_count", record_count)  # we expect 2079
 
@@ -178,10 +180,12 @@ print("full_output_df shape", full_output_df.shape)
 
 # %%
 merged_file = config["paths"]["merged_file"]
+print("merged_file ", merged_file)
 full_output_df.to_csv(merged_file)
 
 
 # %%
+
 model_label_cols = [f"candidate_{i}_sic_code" for i in range(1, 6)]
 model_score_cols = [f"candidate_{i}_likelihood" for i in range(1, 6)]
 clerical_label_cols = [f"sic_ind_occ{i}" for i in range(1, 4)]
@@ -189,14 +193,12 @@ clerical_label_cols = [f"sic_ind_occ{i}" for i in range(1, 4)]
 
 if full_output_df is not None:
     for case in test_cases:
-        print(case)
-        cc_count = case["CCs"][0]
-        llm_count = case["LLMs"][0]
-        print(llm_count)
+        CC_COUNT = case["CCs"][0]
+        LLM_COUNT = case["LLMs"][0]
         config_main = ColumnConfig(
-            model_label_cols=model_label_cols[:llm_count],
-            model_score_cols=model_score_cols[:llm_count],
-            clerical_label_cols=clerical_label_cols[:cc_count],
+            model_label_cols=model_label_cols[:LLM_COUNT],
+            model_score_cols=model_score_cols[:LLM_COUNT],
+            clerical_label_cols=clerical_label_cols[:CC_COUNT],
             id_col="unique_id",
             filter_unambiguous=case["Unambiguous"],
         )
@@ -225,20 +227,19 @@ if full_output_df is not None:
 jaccard_results = analyzer_main.get_jaccard_similarity()
 print("jaccard_results", jaccard_results)
 
-
 jaccard_2_digit_score = analyzer_main.get_jaccard_similarity(match_type="2-digit")
 print("jaccard_2_digit_score", jaccard_2_digit_score)
 
-# Implement testing
 analyzer_main.plot_threshold_curves()
 
-analyzer_main.plot_confusion_heatmap(
-    human_code_col=analyzer_main.config.clerical_label_cols[0],
-    llm_code_col=analyzer_main.config.model_label_cols[0],
-    top_n=10,
+matrix_conf = ConfusionMatrixConfig(
+    human_code_col=clerical_label_cols[0],
+    llm_code_col=model_label_cols[0],
     exclude_patterns=["x", "-9", "4+"],
 )
 
+plot_conf = PlotConfig(save=False)
+analyzer_main.plot_confusion_heatmap(matrix_config=matrix_conf, plot_config=plot_conf)
 
 display(Markdown("### Summary Statistics Dictionary"))
 summary_stats = analyzer_main.get_summary_stats()
