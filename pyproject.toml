@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "survey-assist-utils"
-version = "0.1.0"
+version = "0.0.2"
 description = "Utility module for Survey Assist"
 authors = ["Steve Gibbard <steve.gibbard@ons.gov.uk>"]
 license = "MIT"
@@ -41,6 +41,7 @@ pytest = "^8.3.5"
 ipykernel = "^6.29.5"
 pre-commit = "^4.2.0"
 types-toml = "^0.10.8.20240310"
+jupytext = "^1.17.1"
 
 [tool.isort]
 profile = "black"
