@@ -1,8 +1,9 @@
-"""This module contains prompt component templates, and helper functions for constructing prompt templates,
-which enable generation of synthetic responses to survey questions.
+"""This module contains prompt component templates, and helper functions for
+constructing prompt templates, which enable generation of synthetic responses
+to survey questions.
 
-This module is currently limited to a template and template constructor to request an LLM to answer a
-SIC follow-up question.
+This module is currently limited to a template and template constructor to
+request an LLM to answer a SIC follow-up question.
 """
 
 from langchain.output_parsers import PydanticOutputParser
@@ -22,12 +23,11 @@ def _persona_prompt(persona) -> str:
                classification for the use in the UK official statistics.
                You always respond in British English.
                """
-    else:
-        # TODO
-        return ""
+    # TODO # pylint: disable=fixme
+    return ""
 
 
-_reminder_template = """
+_REMINDER_TEMPLATE = """
 Below is a reminder of the main activity your
 company does, your job title and job description.
 The survey interviewer has not been able to fully classify your company's
@@ -67,7 +67,7 @@ def make_followup_answer_prompt_pydantic(
     parser = PydanticOutputParser(pydantic_object=FollowupAnswerResponse)  # type: ignore
     persona_prompt = _persona_prompt(persona)
     return PromptTemplate.from_template(
-        template=persona_prompt + _reminder_template,
+        template=persona_prompt + _REMINDER_TEMPLATE,
         partial_variables={
             "format_instructions": parser.get_format_instructions(),
             "org_description": request_body["industry_descr"],

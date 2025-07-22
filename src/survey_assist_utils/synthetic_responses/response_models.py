@@ -5,7 +5,8 @@ follow-up questions.
 
 Classes:
     FollowupAnswerResponse: A Pydantic model representing a response to a followup question.
-    FollowupAnswerRequest: A Pydantic model representing a request for an LLM to answer a followup question.
+    FollowupAnswerRequest: A Pydantic model representing a request for an LLM to answer a 
+                           followup question.
 """
 
 from typing import Optional

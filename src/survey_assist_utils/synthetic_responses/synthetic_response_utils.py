@@ -1,21 +1,27 @@
 """This module provides utilities for generating synthetic responses to survey questions,
-focusing initially on follow-up questions, using a specified persona and a Large Language Model (LLM).
+focusing initially on follow-up questions, using a specified persona and a Large Language
+Model (LLM).
 
 Classes:
     SyntheticResponder: A class for generating synthetic responses to survey questions.
     - Inputs:
-        - persona (optional): TODO object describing the characteristics of the persona to emulate.
-        - get_question_function (optional, callable): a helper function to retrieve question(s) from an API / data file.
-        - model_name (str): The name of the LLM to use. Fefaults to "gemini-1.5-flash".
+        - persona (optional): TODO object describing the characteristics of the persona
+          to emulate.
+        - get_question_function (optional, callable): a helper function to retrieve 
+          question(s) from an API / data file.
+        - model_name (str): The name of the LLM to use. Defaults to "gemini-1.5-flash".
 
     - Methods:
-        - instantiate_llm: Initialises a VertexAI instance, using the model specified in the class.
+        - instantiate_llm: Initialises a VertexAI instance, using the model specified in
+                           the class.
         - construct_prompt: Constructs a prompt for answering a follow-up question.
-                            Requires arguments of 'body', a dictionary containing contextual information about
-                            the survey response, and 'followup', a string containing the question to be answered.
+                            Requires arguments of 'body', a dictionary containing 
+                            contextual information about the survey response, and 
+                            'followup', a string containing the question to be answered.
         - answer_followup: Gets the LLM's response to the follow-up question.
-                           Requires arguments of 'prompt', a PromptTemplate object constructed to have the LLM
-                           respond to the question in the given persona, and 'body', a dictionary containing contextual
+                           Requires arguments of 'prompt', a PromptTemplate object 
+                           constructed to have the LLM respond to the question in the 
+                           given persona, and 'body', a dictionary containing contextual
                            information about the survey response.
 
 Typical usage example:
@@ -66,11 +72,12 @@ class SyntheticResponder:
     particularly follow-up questions, using a specified persona and a Large Language Model (LLM).
 
     Attributes:
-        get_question_function (optional, callable): A function that retrieves the follow-up question from an API.
+        get_question_function (optional, callable): A function that retrieves the follow-up 
+                                                    question from an API.
                                                     Defaults to None.
-        persona (optional): A dictionary describing the demographic characteristics of the persona
-                           the LLM should emulate.
-                           Defaults to None.
+        persona (optional): A dictionary describing the demographic characteristics of the 
+                            persona the LLM should emulate.
+                            Defaults to None.
         model_name (str): The name of the LLM to use.
                           Defaults to "gemini-1.5-flash".
         llm: An instance of the LLM (currently VertexAI) used for generating responses.
@@ -115,7 +122,9 @@ class SyntheticResponder:
             raise
 
     def construct_prompt(self, body: dict | str, followup: str) -> PromptTemplate:
-        """Constructs and LLM prompt to respond to the followup question in a specified persona."""
+        """
+        Constructs and LLM prompt to respond to the followup question 
+        in a specified persona."""
         if type(body) not in (dict, str):
             logger.warning(
                 "The object describing the context (body) could not be interpreted"
@@ -123,15 +132,14 @@ class SyntheticResponder:
             raise TypeError(
                 "'body' argument must be either a dictionary or a (string) path to a JSON file"
             )
-        if type(body) is str:
+        if isinstance(body, str):
             body = json.load(body)  # type: ignore[arg-type]
-        if type(followup) is str:
-            return make_followup_answer_prompt_pydantic(
-                persona=self.persona, request_body=body, followup_question=followup  # type: ignore[arg-type]
+        if isinstance(followup, str):
+            return make_followup_answer_prompt_pydantic( # type: ignore[arg-type]
+                persona=self.persona, request_body=body, followup_question=followup
             )
-        else:
-            logger.warning("No follow-up question provided")
-            raise ValueError("No follow-up question provided.")
+        logger.warning("No follow-up question provided")
+        raise ValueError("No follow-up question provided.")
 
     def answer_followup(self, prompt: PromptTemplate, body: dict | str) -> str:
         """Gets the LLM's response to the followup question,
@@ -144,7 +152,7 @@ class SyntheticResponder:
             raise TypeError(
                 "'body' argument must be either a dictionary or a (string) path to a JSON file"
             )
-        if type(body) is str:
+        if isinstance(body, str):
             body = json.load(body)  # type: ignore[arg-type]
         call_dict = body.copy()  # type: ignore
         call_dict["followup_question"] = prompt.partial_variables["followup_question"]
