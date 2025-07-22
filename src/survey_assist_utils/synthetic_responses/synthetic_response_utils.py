@@ -135,8 +135,10 @@ class SyntheticResponder:
         if isinstance(body, str):
             body = json.load(body)  # type: ignore[arg-type]
         if isinstance(followup, str):
-            return make_followup_answer_prompt_pydantic(  # type: ignore[arg-type]
-                persona=self.persona, request_body=body, followup_question=followup
+            return make_followup_answer_prompt_pydantic(
+                persona=self.persona,
+                request_body=body,  # type: ignore[arg-type]
+                followup_question=followup,
             )
         logger.warning("No follow-up question provided")
         raise ValueError("No follow-up question provided.")
