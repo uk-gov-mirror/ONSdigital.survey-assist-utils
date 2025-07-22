@@ -1,13 +1,15 @@
-"""This module contains prompt component templates, and helper functions for constructing prompt templates, 
+"""This module contains prompt component templates, and helper functions for constructing prompt templates,
 which enable generation of synthetic responses to survey questions.
 
 This module is currently limited to a template and template constructor to request an LLM to answer a
 SIC follow-up question.
 """
+
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts.prompt import PromptTemplate
 
-from .response_models import FollowupAnswerResponse, FollowupAnswerRequest
+from .response_models import FollowupAnswerResponse
+
 
 def _persona_prompt(persona) -> str:
     """Constructs a section of the LLM prompt template, informing it about
@@ -45,13 +47,16 @@ Please answer this clarifying question, using the Output Format specified below.
 - clarifying question: {followup_question}
 """
 
-def make_followup_answer_prompt_pydantic(persona, request_body: dict, followup_question: str):
+
+def make_followup_answer_prompt_pydantic(
+    persona, request_body: dict, followup_question: str
+):
     """Constructs a prompt for answering a follow-up question, formatted for a Pydantic output.
 
     Args:
-        persona (TODO): An object describing the characteristics of the persona to emulate. 
-        request_body (dict): A dictionary containing the survey response data, including 
-                             "org_description", 
+        persona (TODO): An object describing the characteristics of the persona to emulate.
+        request_body (dict): A dictionary containing the survey response data, including
+                             "org_description",
                              "job_title",
                              "job_description".
         followup_question (str): The clarifying question from the survey interviewer.
@@ -59,17 +64,15 @@ def make_followup_answer_prompt_pydantic(persona, request_body: dict, followup_q
     Returns:
         PromptTemplate: A Langchain PromptTemplate ready to be used with an LLM.
     """
-    parser = PydanticOutputParser(
-        pydantic_object=FollowupAnswerResponse
-    )
+    parser = PydanticOutputParser(pydantic_object=FollowupAnswerResponse) # type: ignore
     persona_prompt = _persona_prompt(persona)
     return PromptTemplate.from_template(
-                template=persona_prompt + _reminder_template,
-                partial_variables={
-                    "format_instructions": parser.get_format_instructions(),
-                    "org_description": request_body["industry_descr"],
-                    "job_title": request_body["job_title"],
-                    "job_description": request_body["job_description"],
-                    "followup_question": followup_question,
-                },
+        template=persona_prompt + _reminder_template,
+        partial_variables={
+            "format_instructions": parser.get_format_instructions(),
+            "org_description": request_body["industry_descr"],
+            "job_title": request_body["job_title"],
+            "job_description": request_body["job_description"],
+            "followup_question": followup_question,
+        },
     )

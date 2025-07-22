@@ -7,7 +7,9 @@ Classes:
     FollowupAnswerResponse: A Pydantic model representing a response to a followup question.
     FollowupAnswerRequest: A Pydantic model representing a request for an LLM to answer a followup question.
 """
+
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -20,27 +22,24 @@ class FollowupAnswerResponse(BaseModel):
 
     answer: str = Field(
         description="Answer to the followup question.",
-        min_length=2,  # Ensure non-empty response, but it may be possible that 
-                       # 'yes' or 'no' are acceptable answers to the question.
+        min_length=2,  # Ensure non-empty response, but it may be possible that
+        # 'yes' or 'no' are acceptable answers to the question.
     )
+
 
 class FollowupAnswerRequest(BaseModel):
     """Represents a response model for answering of the followup question.
 
     Attributes:
-.
-        org_description (str): The company's main activity.
-        job_title (str): The respondant's job title.
-        job_description (str): The respondant's job description.
-        followup_question (str): The LLM-generated followup question.
+    .
+            org_description (str): The company's main activity.
+            job_title (str): The respondant's job title.
+            job_description (str): The respondant's job description.
+            followup_question (str): The LLM-generated followup question.
     """
 
-    org_description: Optional[str] = Field(
-        description="The company's main activity."
-    )
-    job_title: Optional[str] = Field(
-        description="The respondant's job title."
-    )
+    org_description: Optional[str] = Field(description="The company's main activity.")
+    job_title: Optional[str] = Field(description="The respondant's job title.")
     job_description: Optional[str] = Field(
         description="The respondant's job description."
     )

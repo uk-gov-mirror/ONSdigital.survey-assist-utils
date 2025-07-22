@@ -17,6 +17,21 @@ An instance of this class can be created with a specified LLM to query, persona 
 to emulate, and an (optional) specified function to retrieve questions - allowing for flexibility,
 to retrieve questions from a variety of sources.
 
+#### Assumptions
+
+Whenever the Synthetic Responder is asked to do something (retrieve a question, construct a prompt, 
+or answer a question), the method called will expect a parameter `body` to be given - this should
+be either a JSON file or a dictionary, containing contextual infomation that the LLM should know
+(e.g. the survey respondent's job information in the case of answering SA 
+follow-up questions). 
+To maintain flexibility, no requirements on the contents are set, but they must contain at least the 
+keys which are referenced in the PromptTemplate used.
+
+For the currently-provided PromptTemplates, the following keys are required to be present in the `body`;
+* `job_description` 
+* `job_title` 
+* `industry_descr`
+
 ## TODO
 
 #### Persona Specification
