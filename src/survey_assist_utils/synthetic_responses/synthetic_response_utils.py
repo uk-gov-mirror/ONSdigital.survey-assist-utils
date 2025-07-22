@@ -122,9 +122,9 @@ class SyntheticResponder:
             raise
 
     def construct_prompt(self, body: dict | str, followup: str) -> PromptTemplate:
+        """Constructs and LLM prompt to respond to the followup question
+        in a specified persona.
         """
-        Constructs and LLM prompt to respond to the followup question
-        in a specified persona."""
         if type(body) not in (dict, str):
             logger.warning(
                 "The object describing the context (body) could not be interpreted"
