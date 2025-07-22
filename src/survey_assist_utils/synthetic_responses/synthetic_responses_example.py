@@ -1,3 +1,7 @@
+"""
+This is a basic example usage script for the synthetic_responses module.
+"""
+
 from survey_assist_utils.synthetic_responses.synthetic_response_utils import (
     SyntheticResponder,
 )
