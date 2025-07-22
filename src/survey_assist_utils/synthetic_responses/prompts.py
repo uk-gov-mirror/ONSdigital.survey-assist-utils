@@ -64,7 +64,7 @@ def make_followup_answer_prompt_pydantic(
     Returns:
         PromptTemplate: A Langchain PromptTemplate ready to be used with an LLM.
     """
-    parser = PydanticOutputParser(pydantic_object=FollowupAnswerResponse) # type: ignore
+    parser = PydanticOutputParser(pydantic_object=FollowupAnswerResponse)  # type: ignore
     persona_prompt = _persona_prompt(persona)
     return PromptTemplate.from_template(
         template=persona_prompt + _reminder_template,

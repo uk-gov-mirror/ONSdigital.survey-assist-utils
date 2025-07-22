@@ -110,7 +110,7 @@ class SyntheticResponder:
                 location="europe-west2",
             )
         except Exception as e:
-            logger.error("%s"%e)
+            logger.error("%s" % e)
             logger.warning("connection to LLM failed")
             raise
 
@@ -124,10 +124,10 @@ class SyntheticResponder:
                 "'body' argument must be either a dictionary or a (string) path to a JSON file"
             )
         if type(body) is str:
-            body = json.load(body) # type: ignore[arg-type]
+            body = json.load(body)  # type: ignore[arg-type]
         if type(followup) is str:
             return make_followup_answer_prompt_pydantic(
-                persona=self.persona, request_body=body, followup_question=followup # type: ignore[arg-type]
+                persona=self.persona, request_body=body, followup_question=followup  # type: ignore[arg-type]
             )
         else:
             logger.warning("No follow-up question provided")
@@ -145,8 +145,8 @@ class SyntheticResponder:
                 "'body' argument must be either a dictionary or a (string) path to a JSON file"
             )
         if type(body) is str:
-            body = json.load(body) # type: ignore[arg-type]
-        call_dict = body.copy() # type: ignore
+            body = json.load(body)  # type: ignore[arg-type]
+        call_dict = body.copy()  # type: ignore
         call_dict["followup_question"] = prompt.partial_variables["followup_question"]
         chain = LLMChain(llm=self.llm, prompt=prompt)
         response = chain.invoke(call_dict, return_only_outputs=True)
@@ -159,6 +159,6 @@ class SyntheticResponder:
                 "Answer received from LLM, and successfully parsed", level="DEBUG"
             )
         except ValueError as parse_error:
-            logger.error("%s"%parse_error)
-            logger.warning("Failed to parse response:\n%s"%response["text"])
+            logger.error("%s" % parse_error)
+            logger.warning("Failed to parse response:\n%s" % response["text"])
         return validated_answer
