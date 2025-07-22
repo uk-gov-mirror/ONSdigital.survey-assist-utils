@@ -13,14 +13,14 @@
 # ---
 
 # %%
-"""Runs to test JsonProcessor."""
+"""Runs to Title JsonProcessor."""
 from typing import TypedDict
 
 import pandas as pd
 import toml
-from google.cloud import storage
 from IPython.display import Markdown, display
 
+# gcloud auth application-default login
 from survey_assist_utils.evaluation.coder_alignment import (
     ColumnConfig,
     ConfusionMatrixConfig,
@@ -33,6 +33,8 @@ from survey_assist_utils.evaluation.preprocessor import JsonPreprocessor
 #
 # This script includes all the metrics required for the PPT presentation as follows:
 #
+# For security, the actual bucket name has been changed to "\<my-butket-name\>"
+#
 # 1) Observations in labelled set.
 # 2) Variability across SIC sections.
 # 3) Match of top CC vs top SA on unambiguously Codable - 2 digis, 5 digit.
@@ -40,108 +42,114 @@ from survey_assist_utils.evaluation.preprocessor import JsonPreprocessor
 # 5) Match rate top CC vs any SA on all data - 2 digis, 5 digit.
 # 6) Match rate any CC vs any SA on all data - 2 digis, 5 digit.
 # 7) Jaccard's Score all CC vs all SA, all data - 2 digis, 5 digit.
+#
+# We will first process the JSON output from the original 2000 data batch run.
+#
+# This requires a setup toml file, in 'prepare_config.toml' in this directory.
+#
+# It contains the following:
+# [paths]
+# * the original Title data is here:
+# batch_filepath = "gs://<my-butket-name>/evaluation_data/DSC_Rep_Sample.csv"
+# gcs_bucket_name = "<my-butket-name>"
+# evaluation_data = "evaluation_data/"
+#
+# * The Docker run puts the data here
+# gcs_json_dir = "analysis_outputs/"
+#
+# * To process a single  JSON file: set single_file = "True"
+# named_file = "gs://<my-butket-name>/analysis_outputs/20250620_153641_output.json"
+#
+# * Otherwise the processor will assume all the JSON files after a
+#  specified date are relevant to the evaluation
+#
+# * After running 'add_data_quality_flags', the helper columns will be
+#  written to here:
+# analysis_csv = "gs://<my-butket-name>/analysis_outputs/added_columns/flags_20250620_153641.csv"
+#
+#
+# * To process a list of files that have already been merged with the input
+# annotated CC data:
+#
+# merged_file_list = [
+# "gs://<my-butket-name>/analysis_outputs/
+# merged_files/merged_flags_20250620_153641.csv"
+# "gs://<my-butket-name>/analysis_outputs/
+# merged_files/Jyl_2025-06-27_codability_gemini_1.5-flash.csv"
+# "gs://<my-butket-name>/analysis_outputs/
+# merged_files/Jyl_2025-06-27_codability_gemini_2-flash.csv"
+# ]
+#
+#
+# [parameters]
+# ### Process only files created on or after this date (YYYYMMDD), or only a specified file.
+# single_file = "True"
+# date_since = "20250710"
+
+# %% [markdown]
+# ### Next, we set up the metrics that we defined in the Power Point presentation,
+#  taken from the evaluation plan:
+#
+#
 
 # %%
 
 
 # Define the metrics to run:
-class TestCase(TypedDict):
-    """Represents a single test case configuration for evaluating model behavior.
+class EvaluationCase(TypedDict):
+    """Represents a single Title case configuration for evaluating model behavior.
 
     Attributes:
-        Test (str): A descriptive label or name for the test scenario.
-        CCs (list[int]): A list of content classifier (CC) identifiers used in the test.
-        LLMs (list[int]): A list of large language model (LLM) identifiers used in the test.
-        Unambiguous (bool): Indicates whether the test scenario is unambiguous (True) or
+        Title (str): A descriptive label or name for the Title scenario.
+        CCs (list[int]): A list of content classifier (CC) identifiers used in the Title.
+        LLMs (list[int]): A list of large language model (LLM) identifiers used in the Title.
+        Unambiguous (bool): Indicates whether the Title scenario is unambiguous (True) or
         ambiguous (False).
     """
 
-    Test: str
+    Title: str
     CCs: list[int]
     LLMs: list[int]
     Unambiguous: bool
 
 
-test_cases: list[TestCase] = [
+evaluation_cases_main: list[EvaluationCase] = [
     {
-        "Test": "Match of top CC vs top SA on unambiguously Codable",
+        "Title": "Match of top CC vs top SA on unambiguously Codable",
         "CCs": [1],
         "LLMs": [1],
         "Unambiguous": True,
-    },  # 3) Match of top CC vs top SA on unambiguously Codable - 2 digis, 5 digit.
+    },
+    # 3) Match of top CC vs top SA on unambiguously Codable - 2 digis, 5 digit.
     {
-        "Test": "Match of top CC vs any SA on unambiguously codable",
+        "Title": "Match of top CC vs any SA on unambiguously codable",
         "CCs": [1],
         "LLMs": [5],
         "Unambiguous": True,
-    },  # 4) Match of top CC vs any SA on unambiguously codable - 2 digis, 5 digit.
+    },
+    # 4) Match of top CC vs any SA on unambiguously codable - 2 digis, 5 digit.
     {
-        "Test": "Match rate top CC vs any SA on all data",
+        "Title": "Match rate top CC vs any SA on all data",
         "CCs": [1],
         "LLMs": [5],
         "Unambiguous": False,
-    },  # 5) Match rate top CC vs any SA on all data - 2 digis, 5 digit.
+    },
+    # 5) Match rate top CC vs any SA on all data - 2 digis, 5 digit.
     {
-        "Test": "Match rate any CC vs any SA on all data",
+        "Title": "Match rate any CC vs any SA on all data",
         "CCs": [3],
         "LLMs": [5],
         "Unambiguous": False,
-    },  # 6) Match rate any CC vs any SA on all data - 2 digis, 5 digit.
+    },
+    # 6) Match rate any CC vs any SA on all data - 2 digis, 5 digit.
     {
-        "Test": "Jaccard's Score all CC vs all SA, all data",
+        "Title": "Jaccard's Score all CC vs all SA, all data",
         "CCs": [3],
         "LLMs": [5],
         "Unambiguous": False,
-    },  # 7) Jaccard's Score all CC vs all SA, all data - 2 digis, 5 digit.
+    },
+    # 7) Jaccard's Score all CC vs all SA, all data - 2 digis, 5 digit.
 ]
-
-
-# %%
-
-
-def get_most_recent_gcs_file(bucket_name: str, prefix: str = "") -> str | None:
-    """Finds the most recently modified file in a GCS bucket within a specific
-    directory, excluding sub-directories.
-
-    Args:
-        bucket_name (str): The name of the GCS bucket (e.g., "my-data-bucket").
-        prefix (str): The folder path to search within (e.g., "outputs/json_runs/").
-                      If omitted, it searches the root of the bucket.
-                      Ensure it ends with a '/' to specify a directory.
-
-    Returns:
-        str | None: The full gs:// path of the most recent file, or None if no
-                    files are found in the specified location.
-    """
-    # Ensure the prefix ends with a slash to correctly identify it as a directory
-    if prefix and not prefix.endswith("/"):
-        prefix += "/"
-
-    storage_client = storage.Client()
-
-    # Use delimiter='/' to prevent recursion into sub-directories.
-    # This treats the bucket like a file system directory.
-    blobs = storage_client.list_blobs(bucket_name, prefix=prefix, delimiter="/")
-
-    most_recent_blob = None
-    latest_time = None
-
-    # Iterate through all files at the specified prefix level to find the one
-    # with the latest update time.
-    for blob in blobs:
-        # A blob's name can be the same as the prefix if the "folder" itself
-        # is listed. We want to skip these and only process actual files.
-        if blob.name == prefix:
-            continue
-
-        if latest_time is None or blob.updated > latest_time:
-            latest_time = blob.updated
-            most_recent_blob = blob
-
-    if most_recent_blob:
-        return f"gs://{bucket_name}/{most_recent_blob.name}"
-
-    return None
 
 
 # %%
@@ -152,95 +160,161 @@ with open("prepare_config.toml", encoding="utf-8") as file:
 MY_BUCKET_NAME = config["paths"]["gcs_bucket_name"]
 after_docker_run = config["paths"]["gcs_json_dir"]
 
-json_runs = get_most_recent_gcs_file(MY_BUCKET_NAME, prefix=after_docker_run)
-print("JSON outputs in this file:", json_runs)
 
+# %% [markdown]
+# ### This preparation script only needs running once:
+#
+#
 
 # %%
 # This script relies on
-# %run ../scripts/prepare_evaluation_data_for_analysis.py
+# #%run ../scripts/prepare_evaluation_data_for_analysis.py
+
+# %% [markdown]
+# ### The config is set up to process the original JSON
+# from the 2000 run and original prompt and model:
+#
+#
 
 # %%
-# Write to the config the path of the processed dataframe
-config["paths"]["processed_csv_output"] = config["paths"]["analysis_csv"]
-# This file will be merged in to the json dataframe later
+# Get a list of files to check:
 preprocessor = JsonPreprocessor(config)
-
-# %%
 record_count = preprocessor.count_all_records()
 print("record_count", record_count)  # we expect 2079
 
 llm_processed_df = preprocessor.process_files()
 print("llm_processed_df shape", llm_processed_df.shape)
 
+# %% [markdown]
+# ### We now have a flattened JSON file containing the model's responses to
+# each situation from the data.
+#
+# Next we will run the evaluation from the first run:
+
+# %% [markdown]
+# ### We merge the flattened JSON with the annotated dataset
+#
+#
+#
+
 # %%
-# Now merge the two dataframes:
+# Take the output from the preparation script and make it the input to the merging:
+config["paths"]["processed_csv_output"] = config["paths"]["analysis_csv"]
 full_output_df = preprocessor.merge_eval_data(llm_processed_df)
-print("full_output_df shape", full_output_df.shape)
+
+
+# %% [markdown]
+# ### results from the powerpoint slide 16:
+#
+# 2-digit SIC 	71%
+# (division)
+# 5-digit SIC 	55%
+# (sub-class)
+#
+
 
 # %%
-merged_file = config["paths"]["merged_file"]
-print("merged_file ", merged_file)
-full_output_df.to_csv(merged_file)
+def all_results(df, evaluation_case):
+    """Execute a full evaluation pipeline on a DataFrame using a series of
+    predefined evaluation cases.
+
+    For each evaluation case, this function:
+    - Configures the label columns based on the number of LLM and clerical codes specified.
+    - Initializes a `LabelAccuracy` analyzer with the configuration.
+    - Computes and prints full and 2-digit match accuracy statistics.
+    - Computes and prints Jaccard similarity scores (full and 2-digit).
+    - Plots threshold performance curves.
+    - Generates and displays a confusion matrix heatmap.
+    - Displays summary statistics in a formatted table.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame containing model-generated and
+        clerical label columns, as well as a unique identifier column (`unique_id`).
+        evaluation_case (list[dict]): A list of dictionaries, each defining an evaluation scenario.
+            Each dictionary should include:
+            - "LLMs": list[int] — number of model label columns to use.
+            - "CCs": list[int] — number of clerical label columns to use.
+            - "Unambiguous": bool — whether to filter ambiguous rows.
+            - "Title": str — a label for the test case.
+
+    Side Effects:
+        - Prints evaluation metrics to the console.
+        - Displays plots and summary statistics using IPython display tools.
+        - Raises TypeError if `get_accuracy` does not return a
+        dictionary when `extended=True`.
+
+    Notes:
+        - Assumes standard naming conventions for model and clerical label columns.
+        - Uses the first model and clerical label columns for confusion matrix plotting.
+    """
+    # Set up standard column names
+    model_label_cols = [f"candidate_{i}_sic_code" for i in range(1, 6)]
+    model_score_cols = [f"candidate_{i}_likelihood" for i in range(1, 6)]
+    clerical_label_cols = [f"sic_ind_occ{i}" for i in range(1, 4)]
+
+    if df is not None:
+        for case in evaluation_case:
+            config_main = ColumnConfig(
+                model_label_cols=model_label_cols[: case["LLMs"][0]],
+                model_score_cols=model_score_cols[: case["LLMs"][0]],
+                clerical_label_cols=clerical_label_cols[: case["CCs"][0]],
+                id_col="unique_id",
+                filter_unambiguous=case["Unambiguous"],
+            )
+            print(case["Title"])
+
+            # Initialize the analyzer with the subset and config
+            analyzer_main = LabelAccuracy(df=df, column_config=config_main)
+
+            full_acc_stats = analyzer_main.get_accuracy(
+                match_type="full", extended=True
+            )
+            if not isinstance(full_acc_stats, dict):
+                raise TypeError(
+                    "Expected a dictionary from get_accuracy when extended=True"
+                )
+            print("full_acc_stats", full_acc_stats)
+
+            digit_acc_stats = analyzer_main.get_accuracy(
+                match_type="2-digit", extended=True
+            )
+            if not isinstance(digit_acc_stats, dict):
+                raise TypeError(
+                    "Expected a dictionary from get_accuracy when extended=True"
+                )
+            print("Two digit_acc_stats", digit_acc_stats)
+
+    jaccard_results = analyzer_main.get_jaccard_similarity()
+    print("jaccard_results", jaccard_results)
+
+    jaccard_2_digit_score = analyzer_main.get_jaccard_similarity(match_type="2-digit")
+    print("jaccard_2_digit_score", jaccard_2_digit_score)
+
+    analyzer_main.plot_threshold_curves()
+
+    matrix_conf = ConfusionMatrixConfig(
+        human_code_col=clerical_label_cols[0],
+        llm_code_col=model_label_cols[0],
+        exclude_patterns=["x", "-9", "4+"],
+    )
+
+    plot_conf = PlotConfig(save=False)
+    analyzer_main.plot_confusion_heatmap(
+        matrix_config=matrix_conf, plot_config=plot_conf
+    )
+
+    display(Markdown("### Summary Statistics Dictionary"))
+    summary_stats = analyzer_main.get_summary_stats()
+    display(pd.Series(summary_stats, name="Value").to_frame())
 
 
 # %%
+# In the config file we have a list of merged and flattened files that we can process:
+print(config["paths"]["merged_file_list"])
 
-model_label_cols = [f"candidate_{i}_sic_code" for i in range(1, 6)]
-model_score_cols = [f"candidate_{i}_likelihood" for i in range(1, 6)]
-clerical_label_cols = [f"sic_ind_occ{i}" for i in range(1, 4)]
-
-
-if full_output_df is not None:
-    for case in test_cases:
-        CC_COUNT = case["CCs"][0]
-        LLM_COUNT = case["LLMs"][0]
-        config_main = ColumnConfig(
-            model_label_cols=model_label_cols[:LLM_COUNT],
-            model_score_cols=model_score_cols[:LLM_COUNT],
-            clerical_label_cols=clerical_label_cols[:CC_COUNT],
-            id_col="unique_id",
-            filter_unambiguous=case["Unambiguous"],
-        )
-        print(case["Test"])
-
-        # Initialize the analyzer with the subset and config
-        analyzer_main = LabelAccuracy(df=full_output_df, column_config=config_main)
-
-        full_acc_stats = analyzer_main.get_accuracy(match_type="full", extended=True)
-        if not isinstance(full_acc_stats, dict):
-            raise TypeError(
-                "Expected a dictionary from get_accuracy when extended=True"
-            )
-        print("full_acc_stats", full_acc_stats)
-
-        digit_acc_stats = analyzer_main.get_accuracy(
-            match_type="2-digit", extended=True
-        )
-        if not isinstance(digit_acc_stats, dict):
-            raise TypeError(
-                "Expected a dictionary from get_accuracy when extended=True"
-            )
-        print("digit_acc_stats", digit_acc_stats)
-
-
-jaccard_results = analyzer_main.get_jaccard_similarity()
-print("jaccard_results", jaccard_results)
-
-jaccard_2_digit_score = analyzer_main.get_jaccard_similarity(match_type="2-digit")
-print("jaccard_2_digit_score", jaccard_2_digit_score)
-
-analyzer_main.plot_threshold_curves()
-
-matrix_conf = ConfusionMatrixConfig(
-    human_code_col=clerical_label_cols[0],
-    llm_code_col=model_label_cols[0],
-    exclude_patterns=["x", "-9", "4+"],
-)
-
-plot_conf = PlotConfig(save=False)
-analyzer_main.plot_confusion_heatmap(matrix_config=matrix_conf, plot_config=plot_conf)
-
-display(Markdown("### Summary Statistics Dictionary"))
-summary_stats = analyzer_main.get_summary_stats()
-display(pd.Series(summary_stats, name="Value").to_frame())
+# %%
+for this_file in config["paths"]["merged_file_list"]:
+    print(this_file)
+    full_output_df = pd.read_csv(this_file, dtype=str)
+    print(full_output_df.shape)
+    all_results(full_output_df, evaluation_cases_main)
