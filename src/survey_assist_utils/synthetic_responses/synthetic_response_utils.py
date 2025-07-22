@@ -7,7 +7,7 @@ Classes:
     - Inputs:
         - persona (optional): TODO object describing the characteristics of the persona
           to emulate.
-        - get_question_function (optional, callable): a helper function to retrieve 
+        - get_question_function (optional, callable): a helper function to retrieve
           question(s) from an API / data file.
         - model_name (str): The name of the LLM to use. Defaults to "gemini-1.5-flash".
 
@@ -15,12 +15,12 @@ Classes:
         - instantiate_llm: Initialises a VertexAI instance, using the model specified in
                            the class.
         - construct_prompt: Constructs a prompt for answering a follow-up question.
-                            Requires arguments of 'body', a dictionary containing 
-                            contextual information about the survey response, and 
+                            Requires arguments of 'body', a dictionary containing
+                            contextual information about the survey response, and
                             'followup', a string containing the question to be answered.
         - answer_followup: Gets the LLM's response to the follow-up question.
-                           Requires arguments of 'prompt', a PromptTemplate object 
-                           constructed to have the LLM respond to the question in the 
+                           Requires arguments of 'prompt', a PromptTemplate object
+                           constructed to have the LLM respond to the question in the
                            given persona, and 'body', a dictionary containing contextual
                            information about the survey response.
 
@@ -72,10 +72,10 @@ class SyntheticResponder:
     particularly follow-up questions, using a specified persona and a Large Language Model (LLM).
 
     Attributes:
-        get_question_function (optional, callable): A function that retrieves the follow-up 
+        get_question_function (optional, callable): A function that retrieves the follow-up
                                                     question from an API.
                                                     Defaults to None.
-        persona (optional): A dictionary describing the demographic characteristics of the 
+        persona (optional): A dictionary describing the demographic characteristics of the
                             persona the LLM should emulate.
                             Defaults to None.
         model_name (str): The name of the LLM to use.
@@ -123,7 +123,7 @@ class SyntheticResponder:
 
     def construct_prompt(self, body: dict | str, followup: str) -> PromptTemplate:
         """
-        Constructs and LLM prompt to respond to the followup question 
+        Constructs and LLM prompt to respond to the followup question
         in a specified persona."""
         if type(body) not in (dict, str):
             logger.warning(
@@ -135,7 +135,7 @@ class SyntheticResponder:
         if isinstance(body, str):
             body = json.load(body)  # type: ignore[arg-type]
         if isinstance(followup, str):
-            return make_followup_answer_prompt_pydantic( # type: ignore[arg-type]
+            return make_followup_answer_prompt_pydantic(  # type: ignore[arg-type]
                 persona=self.persona, request_body=body, followup_question=followup
             )
         logger.warning("No follow-up question provided")
