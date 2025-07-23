@@ -53,7 +53,7 @@ def load_config(config_path):
 
 
 # Load configuration from .toml file
-main_config = load_config("config.toml")
+main_config = load_config("prepare_config.toml")
 log_config = main_config.get("logging", {})
 
 # Extract values with defaults
@@ -307,25 +307,11 @@ if __name__ == "__main__":
 
     # Where the input data csv is. We'll use the batch filepath from batch script
     analysis_filepath = main_config["paths"]["batch_filepath"]
+    print("analysis_filepath", analysis_filepath)
 
     # We'll write the post analysis csv here:
     analysis_csv = main_config["paths"]["analysis_csv"]
-
-    # Check the location exists:
-    # Extract the directory from the file path
-    output_dir = os.path.dirname(analysis_csv)
-
-    # Check if it exists
-    try:
-        if os.path.exists(output_dir):
-            logging.info("Directory exists: %s ", output_dir)
-        else:
-            logging.warning("Directory does not exist: %s ", output_dir)
-            raise FileNotFoundError(
-                f"Required output directory not found: {output_dir}"
-            )
-    except KeyError as e:
-        logging.error("Missing configuration key: %s", e)
+    print("analysis_csv", analysis_csv)
 
     # Load the data
     sic_dataframe = pd.read_csv(analysis_filepath, delimiter=",", dtype=str)

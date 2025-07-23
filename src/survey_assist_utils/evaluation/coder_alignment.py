@@ -233,19 +233,82 @@ class MetricCalculator:
             self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
         self.df["max_score"] = self.df[self.config.model_score_cols].max(axis=1)
 
-    def get_jaccard_similarity(self) -> float:
-        """Calculates the average Jaccard Similarity Index."""
+    def get_jaccard_similarity(self, match_type: str = "full") -> float:
+        """Calculates the average Jaccard Similarity Index across all rows."""
+        # Determine the length to slice the codes based on match_type
+        match_len = 2 if match_type == "2-digit" else 5
 
         def calculate_jaccard_for_row(row):
-            model_set = set(row[self.config.model_label_cols].dropna())
-            clerical_set = set(row[self.config.clerical_label_cols].dropna())
+            model_set = {
+                str(val)[:match_len]
+                for val in row[self.model_label_cols].dropna()
+                if val not in self._MISSING_VALUE_FORMATS
+            }
+            clerical_set = {
+                str(val)[:match_len]
+                for val in row[self.clerical_label_cols].dropna()
+                if val not in self._MISSING_VALUE_FORMATS
+            }
+
             if not model_set and not clerical_set:
                 return 1.0
+
             intersection = len(model_set.intersection(clerical_set))
             union = len(model_set.union(clerical_set))
             return intersection / union if union > 0 else 0.0
 
-        return self.df.apply(calculate_jaccard_for_row, axis=1).mean()
+        jaccard_scores = self.df.apply(calculate_jaccard_for_row, axis=1)
+        return jaccard_scores.mean()
+
+    def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
+        """Assesses the value add of a single candidate column using vectorised operations."""
+        primary_clerical_col = self.clerical_label_cols[0]
+        if (
+            candidate_col not in self.df.columns
+            or primary_clerical_col not in self.df.columns
+        ):
+            raise ValueError("Candidate or primary clerical column not found.")
+
+        # Create a working copy with only necessary, non-null candidate predictions
+        working_df = self.df[
+            [self.id_col, candidate_col, *self.clerical_label_cols]
+        ].dropna(subset=[candidate_col])
+        total_considered = len(working_df)
+
+        if total_considered == 0:
+            return {"candidate_column": candidate_col, "total_predictions_made": 0}
+
+        # --- Primary Match ---
+        primary_match_mask = (
+            working_df[candidate_col] == working_df[primary_clerical_col]
+        )
+        primary_match_count = primary_match_mask.sum()
+
+        # --- Any Clerical Match ---
+        clerical_melted = working_df.melt(
+            id_vars=[self.id_col, candidate_col],
+            value_vars=self.clerical_label_cols,
+            value_name="clerical_label",
+        ).dropna(subset=["clerical_label"])
+
+        any_match_mask = (
+            clerical_melted[candidate_col] == clerical_melted["clerical_label"]
+        )
+        any_match_ids = clerical_melted[any_match_mask][self.id_col].unique()
+        any_match_count = len(any_match_ids)
+
+        return {
+            "candidate_column": candidate_col,
+            "total_predictions_made": total_considered,
+            "primary_match_percent": round(
+                100 * primary_match_count / total_considered, 2
+            ),
+            "primary_match_count": int(primary_match_count),
+            "any_clerical_match_percent": round(
+                100 * any_match_count / total_considered, 2
+            ),
+            "any_clerical_match_count": int(any_match_count),
+        }
 
     def get_accuracy(
         self, threshold: float = 0.0, match_type: str = "full", extended: bool = False
