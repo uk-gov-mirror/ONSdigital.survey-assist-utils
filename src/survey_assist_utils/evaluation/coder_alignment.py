@@ -249,7 +249,6 @@ class LabelAccuracy:
         match_len = 2 if match_type == "2-digit" else 5
 
         def calculate_jaccard_for_row(row):
-            # The change is here: slice each code to the desired length
             model_set = {
                 str(val)[:match_len]
                 for val in row[self.model_label_cols].dropna()
