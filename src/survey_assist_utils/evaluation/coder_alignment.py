@@ -263,7 +263,32 @@ class LabelAccuracy:
         return jaccard_scores.mean()
 
     def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
-        """Assesses the value add of a single candidate column using vectorised operations."""
+        """
+        Evaluate the predictive contribution of a candidate column by comparing it 
+        against clerical labels using vectorized operations.
+
+        This method calculates how often the candidate column's predictions match:
+        1. The primary clerical label column (exact match).
+        2. Any of the available clerical label columns (partial match).
+
+        Args:
+            candidate_col (str): The name of the candidate column to evaluate.
+
+        Returns:
+            dict[str, Any]: A dictionary containing:
+                - 'candidate_column': Name of the evaluated candidate column.
+                - 'total_predictions_made': Number of non-null predictions considered.
+                - 'primary_match_percent': Percentage of predictions matching the primary 
+                clerical label.
+                - 'primary_match_count': Count of exact matches with the primary clerical label.
+                - 'any_clerical_match_percent': Percentage of predictions matching any 
+                clerical label.
+                - 'any_clerical_match_count': Count of matches with any clerical label.
+
+        Raises:
+            ValueError: If the candidate column or the primary clerical label column is 
+            missing from the DataFrame.
+        """
         primary_clerical_col = self.clerical_label_cols[0]
         if (
             candidate_col not in self.df.columns
