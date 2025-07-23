@@ -243,28 +243,65 @@ class LabelAccuracy:
             self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
         self.df["max_score"] = self.df[self.model_score_cols].max(axis=1)
 
-    def get_jaccard_similarity(self) -> float:
-        """Calculates the average Jaccard Similarity Index across all rows."""
+    def get_jaccard_similarity(self, match_type: str = "full") -> float:
+        """Compute the average Jaccard Similarity Index between model-generated and
+        clerical labels across all rows in the DataFrame.
+
+        The Jaccard Similarity Index is calculated for each row by comparing sets of
+        codes from model and clerical labels.
+        Codes are optionally truncated to a specified length before comparison,
+        depending on the `match_type`.
+
+        Parameters:
+            match_type (str): Determines the level of code truncation before comparison.
+                            - "full" (default): Use the full code (first 5 characters).
+                            - "2-digit": Use only the first 2 characters of each code.
+
+        Returns:
+            float: The mean Jaccard Similarity Index across all rows. If both sets are
+            empty for a row, the similarity is considered 1.0.
+        """
+        # Determine the length to slice the codes based on match_type
+        match_len = 2 if match_type == "2-digit" else 5
 
         def calculate_jaccard_for_row(row):
-            model_set = set(row[self.model_label_cols].dropna())
-            clerical_set = set(row[self.clerical_label_cols].dropna())
+            """Calculate the Jaccard Similarity Index for a single row of the DataFrame.
+
+            This function compares two sets of codes—model-generated and clerical—after
+            truncating each code to a specified length. It returns the Jaccard index,
+            which is the size of the intersection divided by the size of the union of the sets.
+
+            Args:
+                row (pd.Series): A row from the DataFrame containing model and
+                clerical label columns.
+
+            Returns:
+                float: The Jaccard Similarity Index for the row.
+                    Returns 1.0 if both sets are empty, and 0.0 if the union is empty.
+            """
+            model_set = {
+                str(val)[:match_len]
+                for val in row[self.model_label_cols].dropna()
+                if val not in self._MISSING_VALUE_FORMATS
+            }
+            clerical_set = {
+                str(val)[:match_len]
+                for val in row[self.clerical_label_cols].dropna()
+                if val not in self._MISSING_VALUE_FORMATS
+            }
 
             if not model_set and not clerical_set:
                 return 1.0
 
-            intersection_size = len(model_set.intersection(clerical_set))
-            union_size = len(model_set.union(clerical_set))
-
-            return intersection_size / union_size if union_size > 0 else 0.0
+            intersection = len(model_set.intersection(clerical_set))
+            union = len(model_set.union(clerical_set))
+            return intersection / union if union > 0 else 0.0
 
         jaccard_scores = self.df.apply(calculate_jaccard_for_row, axis=1)
-
         return jaccard_scores.mean()
 
     def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
-        """
-        Evaluate the predictive contribution of a candidate column by comparing it 
+        """Evaluate the predictive contribution of a candidate column by comparing it
         against clerical labels using vectorized operations.
 
         This method calculates how often the candidate column's predictions match:
@@ -278,15 +315,15 @@ class LabelAccuracy:
             dict[str, Any]: A dictionary containing:
                 - 'candidate_column': Name of the evaluated candidate column.
                 - 'total_predictions_made': Number of non-null predictions considered.
-                - 'primary_match_percent': Percentage of predictions matching the primary 
+                - 'primary_match_percent': Percentage of predictions matching the primary
                 clerical label.
                 - 'primary_match_count': Count of exact matches with the primary clerical label.
-                - 'any_clerical_match_percent': Percentage of predictions matching any 
+                - 'any_clerical_match_percent': Percentage of predictions matching any
                 clerical label.
                 - 'any_clerical_match_count': Count of matches with any clerical label.
 
         Raises:
-            ValueError: If the candidate column or the primary clerical label column is 
+            ValueError: If the candidate column or the primary clerical label column is
             missing from the DataFrame.
         """
         primary_clerical_col = self.clerical_label_cols[0]
