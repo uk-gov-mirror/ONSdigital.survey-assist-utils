@@ -19,9 +19,8 @@ import pytest
 
 from survey_assist_utils.evaluation.preprocessor import JsonPreprocessor
 
+
 # --- Test Fixtures ---
-
-
 @pytest.fixture
 def mock_config():
     """Provides a mock configuration dictionary for tests."""
@@ -105,7 +104,9 @@ def test_get_gcs_filepaths(
     mock_instance.list_blobs.assert_called_with("test-bucket", prefix="test/prefix/")
 
 
-def test_record_count(mock_config):  # pylint: disable=redefined-outer-name
+def test_record_count(
+    mock_config, mock_storage_client
+):  # pylint: disable=redefined-outer-name
     """Test counting records from a mock JSON response."""
     preprocessor = JsonPreprocessor(mock_config)
 
@@ -128,8 +129,9 @@ def test_record_count(mock_config):  # pylint: disable=redefined-outer-name
         assert preprocessor.record_count("any/path") == 0
 
 
+# FIX: Added 'mock_storage_client' to the function signature to activate the mock.
 def test_process_files_deduplication(
-    mock_config,
+    mock_config, mock_storage_client
 ):  # pylint: disable=redefined-outer-name
     """Test that process_files correctly handles and removes duplicates."""
     preprocessor = JsonPreprocessor(mock_config)
