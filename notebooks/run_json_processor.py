@@ -13,10 +13,12 @@
 # ---
 
 # %%
-"""Runs to Title JsonProcessor."""
+"""Runs to Call JsonProcessor and assess the recent LLM metrics."""
 from typing import TypedDict
 
+import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 import toml
 from IPython.display import Markdown, display
 
@@ -202,6 +204,109 @@ print("llm_processed_df shape", llm_processed_df.shape)
 config["paths"]["processed_csv_output"] = config["paths"]["analysis_csv"]
 full_output_df = preprocessor.merge_eval_data(llm_processed_df)
 
+
+# %% [markdown]
+# ### We check the input data distributions
+#
+#
+
+# %%
+
+
+def display_group_membership_analysis(df: pd.DataFrame):
+    """Calculates and displays a pie chart and summary of group memberships."""
+    total_count = len(df)
+    having_four_responses = 4
+
+    # Calculate counts for each category
+    count_uncodeable = (df["num_answers"] == 0).sum()
+    count_2_digits_only = df["Match_2_digits"].sum()
+    count_5_digits_unambiguous = df["Unambiguous"].sum()
+    count_5_digits_ambiguous = (df["Match_5_digits"] & ~df["Unambiguous"]).sum()
+    count_3_digits_only = df["Match_3_digits"].sum()
+    count_four_plus = (df["num_answers"] == having_four_responses).sum()
+
+    group_counts = [
+        count_uncodeable,
+        count_four_plus,
+        count_2_digits_only,
+        count_3_digits_only,
+        count_5_digits_unambiguous,
+        count_5_digits_ambiguous,
+    ]
+
+    group_labels = [
+        "Uncodeable",
+        "4+ Codes",
+        "Codeable to 2 digits only",
+        "Codeable to 3 digits only",
+        "Codeable unambiguously to 5 digits",
+        "Codeable ambiguously to 5 digits",
+    ]
+
+    total_categorised = sum(group_counts)
+    count_other = total_count - total_categorised
+
+    if count_other > 0:
+        group_counts.append(count_other)
+        group_labels.append("Other")
+
+    # Create and display the pie chart
+    plt.figure(figsize=(10, 10))
+    plt.pie(
+        group_counts,
+        autopct=lambda p: f"{p:.1f}%" if p > 1 else "",
+        startangle=90,
+        colors=sns.color_palette("pastel", len(group_counts)),
+    )
+    plt.title("Distribution of Group Membership in Labelled Data", fontsize=16)
+    plt.legend(
+        labels=[
+            f"{label} ({count/total_count*100:.1f}%)"
+            for label, count in zip(group_labels, group_counts)
+        ],
+        loc="center left",
+        bbox_to_anchor=(1, 0, 0.5, 1),
+    )
+    plt.axis("equal")
+    plt.show()
+    plt.close()
+
+    # Create and display the summary table
+    percentages = [(count / total_count) * 100 for count in group_counts]
+    summary_df = pd.DataFrame(
+        {"Category": group_labels, "Count": group_counts, "Percentage": percentages}
+    )
+    display(summary_df)
+
+
+display_group_membership_analysis(full_output_df)
+
+
+# %% [markdown]
+# ### And check the distribution of SIC Section membership:
+#
+#
+
+
+# %%
+def plot_sic_division_histogram(df: pd.DataFrame):
+    """Generates and displays a histogram for the SIC_Division column."""
+    plt.figure(figsize=(12, 8))
+
+    counts = df["SIC_Division"].value_counts(normalize=True).nlargest(10) * 100
+
+    ax = sns.barplot(x=counts.index, y=counts.values, palette="viridis")
+    ax.set_title(f"Top 10 Most Frequent SIC Divisions (Total Records: {len(df)})")
+    plt.ylabel("Percentage")
+    plt.xlabel("SIC Division (2-Digit Code)")
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+    plt.show()
+    plt.close()
+
+
+plot_sic_division_histogram(full_output_df)
 
 # %% [markdown]
 # ### results from the powerpoint slide 16:
