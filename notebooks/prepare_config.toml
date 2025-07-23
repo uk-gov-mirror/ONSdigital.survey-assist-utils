@@ -18,6 +18,12 @@ analysis_csv = "gs://<my-bucket-name>/analysis_outputs/added_columns/flags_20250
 # Merged file store:
 merged_file = "gs://<my-bucket-name>/analysis_outputs/merged_files/merged_flags_20250620_153641.csv"
 
+
+merged_file_list = ["gs://<my-bucket-name>/analysis_outputs/merged_files/merged_flags_20250620_153641.csv",
+"gs://<my-bucket-name>/analysis_outputs/merged_files/Jyl_2025-06-27_codability_gemini_1.5-flash.csv",
+"gs://<my-bucket-name>/analysis_outputs/merged_files/Jyl_2025-06-27_codability_gemini_2-flash.csv" ]
+
+
 [parameters]
 # Process only files created on or after this date (YYYYMMDD)
 single_file = "True"
