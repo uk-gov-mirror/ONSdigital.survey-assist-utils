@@ -1,0 +1,10 @@
+Experiment label
+Date run
+Description. *Prompt used*
+location of a JSON file
+Makes a dataframe containing LLM responses:  recommended SIC codes, confidence value, follow up question, input payload
+Header, or meta data containing link to the description.
+pandas.to_parquet - a more robust saved version of the same file. (or pickle)
+NB keep track of data types.
+
+We want to be able to read in a dataframe containing 
