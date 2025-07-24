@@ -14,13 +14,15 @@
 
 # %%
 """Runs to Call JsonProcessor and assess the recent LLM metrics."""
-
 # pylint: disable=line-too-long
 from typing import TypedDict
 
 import pandas as pd
 import toml
 from IPython.display import Markdown, display
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pathlib import Path
 
 # gcloud auth application-default login
 from survey_assist_utils.evaluation.coder_alignment import (
@@ -83,14 +85,14 @@ from survey_assist_utils.evaluation.preprocessor import JsonPreprocessor
 #
 #
 # [parameters]
-# ### Process only files created on or after this date (YYYYMMDD), or only a specified file.
+# * Process only files created on or after this date (YYYYMMDD), or only a specified file.
+#
 # single_file = "True"
+#
 # date_since = "20250710"
 
 # %% [markdown]
 # ### Next, we set up the metrics that we defined in the Power Point presentation,
-#  taken from the evaluation plan:
-#
 #
 
 # %%
@@ -175,7 +177,6 @@ after_docker_run = config["paths"]["gcs_json_dir"]
 # ### The config is set up to process the original JSON
 # from the 2000 run and original prompt and model:
 #
-#
 
 # %%
 # Get a list of files to check:
@@ -242,7 +243,6 @@ full_output_df = preprocessor.merge_eval_data(llm_processed_df)
 # | 2-digit SIC    | (division)  | 67%                                | 87%                               | 87%                               |
 # | 5-digit SIC    | (sub-class) | 42.10%                             | 55%                               | 56%                               |
 # ```
-
 
 # %%
 def all_results(df, evaluation_case):
@@ -347,7 +347,7 @@ print(config["paths"]["merged_file_list"])
 prompts = [
     "Original prompt (Gemini 1.5-flash)",
     "Refined prompt (Gemini 1.5-flash)",
-    "Refined prompt (Gemini 2.0-flash)",
+    "Refined prompt (Gemini 2.0-flash)"
 ]
 
 for prompt, this_file in zip(prompts, config["paths"]["merged_file_list"]):
@@ -355,3 +355,4 @@ for prompt, this_file in zip(prompts, config["paths"]["merged_file_list"]):
     full_output_df = pd.read_csv(this_file, dtype=str)
     print(full_output_df.shape)
     all_results(full_output_df, evaluation_cases_main)
+
