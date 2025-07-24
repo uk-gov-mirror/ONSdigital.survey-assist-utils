@@ -14,6 +14,8 @@
 
 # %%
 """Runs to Call JsonProcessor and assess the recent LLM metrics."""
+
+# pylint: disable=line-too-long
 from typing import TypedDict
 
 import pandas as pd
@@ -167,7 +169,7 @@ after_docker_run = config["paths"]["gcs_json_dir"]
 
 # %%
 # This script relies on
-# #%run ../scripts/prepare_evaluation_data_for_analysis.py
+# %run ../scripts/prepare_evaluation_data_for_analysis.py
 
 # %% [markdown]
 # ### The config is set up to process the original JSON
@@ -185,16 +187,10 @@ llm_processed_df = preprocessor.process_files()
 print("llm_processed_df shape", llm_processed_df.shape)
 
 # %% [markdown]
-# ### We now have a flattened JSON file containing the model's responses to
-# each situation from the data.
+# ### We now have a flattened JSON file containing the model's responses
 #
 # Next we will run the evaluation from the first run:
-
-# %% [markdown]
-# ### We merge the flattened JSON with the annotated dataset
-#
-#
-#
+# We merge the flattened JSON with the annotated dataset
 
 # %%
 # Take the output from the preparation script and make it the input to the merging:
@@ -203,23 +199,49 @@ full_output_df = preprocessor.merge_eval_data(llm_processed_df)
 
 
 # %% [markdown]
-# ### We check the input data distributions
+# ## Expected Output Results:
 #
+# ### Match rate of top CC vs top SA
+# ```
+# | Metric         | Method                          | Original prompt (Gemini 1.5-flash) | Refined prompt (Gemini 1.5-flash) | Refined prompt (Gemini 2.0-flash) |
+# |----------------|---------------------------------|------------------------------------|-----------------------------------|-----------------------------------|
+# | 2-digit SIC    | (division)                      | 71%                                | 75%                               | 81%                               |
+# | 5-digit SIC    | (sub-class)                     | 55%                                | 67%                               | 72%                               |
+# ```
 #
 
 # %% [markdown]
-# ### And check the distribution of SIC Section membership:
 #
+# ### Match rate of top CC vs any SA
+# ```
+# | Metric         | Method      | Original prompt (Gemini 1.5-flash) | Refined prompt (Gemini 1.5-flash) | Refined prompt (Gemini 2.0-flash) |
+# |----------------|-------------|------------------------------------|-----------------------------------|-----------------------------------|
+# | 2-digit SIC    | (division)  | 79%                                | 96%                               | 96%                               |
+# | 5-digit SIC    | (sub-class) | 66%                                | 86%                               | 87%                               |
+# ```
 #
 
 # %% [markdown]
-# ### results from the powerpoint slide 16:
+# ### Match rate of top CC vs any SA
 #
-# 2-digit SIC 	71%
-# (division)
-# 5-digit SIC 	55%
-# (sub-class)
+# ```
+# | Metric         | Method      | Original prompt (Gemini 1.5-flash) | Refined prompt (Gemini 1.5-flash) | Refined prompt (Gemini 2.0-flash) |
+# |----------------|-------------|------------------------------------|-----------------------------------|-----------------------------------|
+# | 2-digit SIC    | (division)  | 67%                                | 87%                               | 87%                               |
+# | 5-digit SIC    | (sub-class) | 42.10%                             | 55%                               | 56%                               |
+# ```
 #
+
+# %% [markdown]
+# ### Match rate of any CC vs any SA
+#
+#
+# ```
+# | Metric         | Method      | Original prompt (Gemini 1.5-flash) | Refined prompt (Gemini 1.5-flash) | Refined prompt (Gemini 2.0-flash) |
+# |----------------|-------------|------------------------------------|-----------------------------------|-----------------------------------|
+# | 2-digit SIC    | (division)  | 67%                                | 87%                               | 87%                               |
+# | 5-digit SIC    | (sub-class) | 42.10%                             | 55%                               | 56%                               |
+# ```
 
 
 # %%
@@ -322,8 +344,14 @@ def all_results(df, evaluation_case):
 print(config["paths"]["merged_file_list"])
 
 # %%
-for this_file in config["paths"]["merged_file_list"]:
-    print(this_file)
+prompts = [
+    "Original prompt (Gemini 1.5-flash)",
+    "Refined prompt (Gemini 1.5-flash)",
+    "Refined prompt (Gemini 2.0-flash)",
+]
+
+for prompt, this_file in zip(prompts, config["paths"]["merged_file_list"]):
+    print(f"{prompt}: {this_file}")
     full_output_df = pd.read_csv(this_file, dtype=str)
     print(full_output_df.shape)
     all_results(full_output_df, evaluation_cases_main)
