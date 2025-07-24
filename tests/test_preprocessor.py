@@ -105,7 +105,7 @@ def test_get_gcs_filepaths(
 
 
 def test_record_count(
-    mock_config, mock_storage_client
+    mock_config, mock_storage_client  # pylint: disable=unused-argument
 ):  # pylint: disable=redefined-outer-name
     """Test counting records from a mock JSON response."""
     preprocessor = JsonPreprocessor(mock_config)
@@ -131,7 +131,7 @@ def test_record_count(
 
 # FIX: Added 'mock_storage_client' to the function signature to activate the mock.
 def test_process_files_deduplication(
-    mock_config, mock_storage_client
+    mock_config, mock_storage_client  # pylint: disable=unused-argument
 ):  # pylint: disable=redefined-outer-name
     """Test that process_files correctly handles and removes duplicates."""
     preprocessor = JsonPreprocessor(mock_config)
