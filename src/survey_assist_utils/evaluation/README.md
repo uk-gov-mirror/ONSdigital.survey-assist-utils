@@ -56,3 +56,242 @@ analyzer.plot_confusion_heatmap(
 
 print(f"Accuracy Stats: {accuracy_stats}")
 print(f"Average Jaccard Score: {jaccard_score:.4f}")
+
+
+
+
+Survey Assist SIC LLM 
+
+Evaluation plan 
+
+Updated – 14/07/2025 
+
+[Author(s)] 
+
+Overview 
+
+Survey Assist (SA) is a developing prototype that aims to improve the codability and classification accuracy of Transformed Labour Force Survey (T-LFS) responses.  
+
+Survey Assist can automatically generate the most relevant follow up survey questions in a live session with a respondent by making use of a Large Language Model (LLM). 
+
+Evaluation covers a range of dimensions and starts with focus on alignment between clerical coder labels and LLM outputs. 
+
+The purpose of the document is to provide a framework for evaluating the Survey Assist System. The LLM is prompted to assign a SIC code and follow-up question when given the survey respondents’ answers to questions about employment. 
+
+SOC quality evaluation will be likely similar but is not covered here. 
+
+The evaluation plan covers several aspects including: 
+
+Alignment with clerical coders (CC). This refers to the extent to which outputs from Survey Assist agree with those provided by the clerical coders. 
+
+Alignment can be evaluated both for coding without follow-up and again when additional information is collected from the respondents. 
+
+Error analysis. An assessment will be carried out to understand the root cause of the main errors in SA responses. 
+
+Model output stability. Here we aim to measure the extent to which Survey Assist results change when model parameters change. 
+
+Quality of the follow-up. An assessment of reading score, suitability and ability to disambiguate the shortlist of possibilities. Exact details of this will be addressed elsewhere. 
+
+Bias. A simulation of a survey using another LLM to play the part of the respondent. See bias document. 
+
+ 
+
+ 
+
+ 
+
+ 
+
+Metrics of Alignment: 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+Human coder alignment 
+
+The dataset of 2000 broadly representative selection from across all sections. Provided by Clare Cheeseman and Hannah Tomlinson, these data are a carefully selected representative sample with expert SIC allocations that will be used to determine the benchmark of performance. 
+
+Unambiguous responses. 
+
+When a coder gives only a single assessment to five digits, they have identified unambiguously the code from the given information without need of a follow-up question. These will be used as a subset for measures. 
+
+ 
+
+Scenario 1 – SA performance on unambiguously codable 
+
+The purpose of this metric is to give an initial score of a direct match between the LLM’s first choice and the coders’ unambiguous choice. Of the initial 2079 dataset, 1291 are considered unambiguous. 
+
+ 
+
+ 
+
+Business need/ motivation: 
+
+This gives the team a baseline of SA’s ability to match the coders’ assessment, when the coder is sure of the answer. 
+
+Approach: 
+
+A measure of the number of responses where the first choices are the same, given as a percentage. This is done at both all five digits and again for only the first two digits (SIC Division) for both data sets for the unambiguous data only. 
+
+How the metric will be used: 
+
+This will be used to give an initial measure of Survey Assist’s direct accuracy. It will represent a minimum performance level against which proposed changes must improve upon before acceptance. 
+
+ 
+
+Scenario 2 – Any shortlist match rate to unambiguously codable 
+
+ 
+
+Survey Assist provides multiple answers as a shortlist. This metric checks if any of the SA answers match the coders’ selection for the unambiguous data. 
+
+Business need/ motivation: 
+
+This gives the team an insight as to whether the LLM is at least in the appropriate area of judgement with the human coders. 
+
+Approach: 
+
+A count of the number of responses where one or more SA responses matched the coders’ answer. This is done at both five digits and again for only the first two digits for both data sets. 
+
+How the metric will be used: 
+
+This will be used to check for minimum LLM adherence to the prompt and ability to make use of the RAG provided dataset. This is a ‘canary’ test and should always give a high result. 
+
+All responses. 
+
+ 
+
+Scenario 3 – Top Clerical Coder response featuring in SA shortlist rate 
+
+ 
+
+This metric makes use of the coders’ tendency to put the preferred option into the first choice. Whilst not always the case, the rate at which this code featuring the SA shortlist is a valuable metric. 
+
+Business need/ motivation: 
+
+This provides a more nuanced measure of guidance of SA to be considering similar options to the coder. It will provide a basis for the follow-up question. 
+
+Approach: 
+
+A count of the number of responses where one of the SA responses matches the coders’ first choice. This is done at both five digits and two digits for both data sets, both as unambiguous only and all data. 
+
+How the metric will be used: 
+
+This will be used to provide a basis for prompt improvement and follow-up question relevance. 
+
+Scenario 4 – Clerical Coder Shortlist and SA shortlist containing at least one common element 
+
+ 
+
+This metric ...the rate at which this code featuring the SA shortlist is a valuable metric. 
+
+Business need/ motivation: 
+
+This provides. 
+
+A follow-up question will be required, so absolute accuracy isn’t as important at this stage. 
+
+Approach: 
+
+A count of the number of responses where one of the SA responses is found in the CC’s shortlist. This is done at both five digits and two digits. 
+
+ 
+
+How the metric will be used: 
+
+This will be used to provide a basis for prompt improvement and follow-up question relevance. 
+
+Scenario 5 – Jaccard measure. 
+
+ 
+
+ 
+
+This metric . 
+
+Business need/ motivation: 
+
+This provides . 
+
+Approach: 
+
+A This is done at both five digits and two digits for both data sets, both as unambiguous only and all data. 
+
+How the metric will be used: 
+
+This will be used to provide  
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+Scenario 6 – Error analysis. 
+
+ 
+
+ 
+
+This metric ... 
+
+Business need/ motivation: 
+
+This provides. 
+
+A follow-up question will be required, so absolute accuracy isn’t as important at this stage. 
+
+Approach: 
+
+A count  
+
+ 
+
+How the metric will be used: 
+
+This will be used to provide  
+
+ 
+
+ 
+
+Scenario 7 – Model Stability  
+
+The purpose of this metric is to check the consistency of the system’s performance as prompts and models change during development.   
+
+ 
+
+Business need/ motivation: 
+
+This provides. 
+
+Approach: 
+
+A subset of a broad selection of data will be used as a quick check of performance.  
+
+ 
+
+How the metric will be used: 
+
+This will be used to provide a Go/No Go for incremental changes to ensure continuous improvement of the system. 
+
+ 
+
+ 
