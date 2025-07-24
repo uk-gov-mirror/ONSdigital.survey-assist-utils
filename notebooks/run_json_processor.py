@@ -14,14 +14,11 @@
 
 # %%
 """Runs to Call JsonProcessor and assess the recent LLM metrics."""
-from pathlib import Path
 
 # pylint: disable=line-too-long
 from typing import TypedDict
 
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 import toml
 from IPython.display import Markdown, display
 
@@ -245,6 +242,7 @@ full_output_df = preprocessor.merge_eval_data(llm_processed_df)
 # | 5-digit SIC    | (sub-class) | 42.10%                             | 55%                               | 56%                               |
 # ```
 
+
 # %%
 def all_results(df, evaluation_case):
     """Execute a full evaluation pipeline on a DataFrame using a series of
@@ -348,7 +346,7 @@ print(config["paths"]["merged_file_list"])
 prompts = [
     "Original prompt (Gemini 1.5-flash)",
     "Refined prompt (Gemini 1.5-flash)",
-    "Refined prompt (Gemini 2.0-flash)"
+    "Refined prompt (Gemini 2.0-flash)",
 ]
 
 for prompt, this_file in zip(prompts, config["paths"]["merged_file_list"]):
@@ -356,4 +354,3 @@ for prompt, this_file in zip(prompts, config["paths"]["merged_file_list"]):
     full_output_df = pd.read_csv(this_file, dtype=str)
     print(full_output_df.shape)
     all_results(full_output_df, evaluation_cases_main)
-
