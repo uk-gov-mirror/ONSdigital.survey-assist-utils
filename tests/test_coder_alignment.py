@@ -5,13 +5,11 @@ that each component correctly performs its single responsibility.
 """
 
 import os
-from unittest.mock import patch
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
 
-from survey_assist_utils.configs.column_config import ColumnConfig
 from survey_assist_utils.data_cleaning.data_cleaner import DataCleaner
 from survey_assist_utils.evaluation.coder_alignment import (
     ConfusionMatrixConfig,
@@ -25,6 +23,7 @@ from survey_assist_utils.evaluation.coder_alignment import (
 # by pytest from the 'conftest.py' file.
 
 
+# pylint: disable=too-few-public-methods
 # --- Tests for MetricCalculator ---
 class TestMetricCalculator:
     """Tests the MetricCalculator's ability to compute metrics on clean data."""
@@ -118,7 +117,7 @@ class TestVisualizer:
         calculator = MetricCalculator(clean_df, config)
         visualizer = Visualizer(calculator.df, calculator)
 
-        # Mock get_threshold_stats to avoid re-calculating in a viz test
+        # The original get_threshold_stats accepts an optional 'thresholds' argument.
         def mock_get_threshold_stats():
             return pd.DataFrame(
                 {
@@ -128,8 +127,8 @@ class TestVisualizer:
                 }
             )
 
-        with patch.object(calculator, "get_threshold_stats", mock_get_threshold_stats):
-            calculator.get_threshold_stats = mock_get_threshold_stats  # type: ignore[method-assign]
+        # Use monkeypatch to replace the method for the duration of this test.
+        monkeypatch.setattr(calculator, "get_threshold_stats", mock_get_threshold_stats)
 
         plot_conf = PlotConfig(save=True, filename=str(tmp_path / "test.png"))
         matrix_conf = ConfusionMatrixConfig(
