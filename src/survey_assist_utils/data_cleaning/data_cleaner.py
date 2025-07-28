@@ -94,9 +94,14 @@ class DataCleaner:
         Returns:
             pd.DataFrame: A cleaned and processed DataFrame ready for analysis.
         """
-        self._validate_inputs(df)
-        df = self._filter_unambiguous(df)
-        df = self._clean_dataframe(df)
+
+        working_df = df.copy()
+        self._validate_inputs(working_df)
+        working_df = self._filter_unambiguous(working_df)
+        working_df = self._clean_dataframe(working_df)
+
+        return working_df
+
 
         return df
 
@@ -115,7 +120,7 @@ class DataCleaner:
         Raises:
             ValueError: If any required columns are missing from the DataFrame.
             ValueError: If the number of model label columns does not match the number of model score columns.
-        """
+        """    
         required_cols = [
             self.config.id_col,
             *self.config.model_label_cols,
@@ -132,6 +137,19 @@ class DataCleaner:
             raise ValueError(
                 "Number of model label columns must match number of score columns"
             )
+        # Check the data types of the columns:        
+        for col in self.config.model_score_cols:
+            if not pd.api.types.is_numeric_dtype(self.df[col]):
+                # Attempt a dry-run of coercion to see if it's possible
+                if not pd.to_numeric(self.df[col], errors='coerce').notna().all():
+                    # This warning flags columns with non-numeric values that will be lost
+                    print(f"Warning: Column '{col}' is not numeric and contains values that cannot be converted.")
+
+        # Check that label columns are strings or objects that can be treated as strings
+        for col in self.config.model_label_cols + self.config.clerical_label_cols:
+            if not pd.api.types.is_string_dtype(self.df[col]) and not pd.api.types.is_object_dtype(self.df[col]):
+                print(f"Warning: Label column '{col}' is not of type string or object.")
+
 
     # REFACTOR: This method now accepts a DataFrame, filters it, and returns the result.
     def _filter_unambiguous(self, df: pd.DataFrame) -> pd.DataFrame:
