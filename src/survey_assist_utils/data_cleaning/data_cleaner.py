@@ -1,44 +1,62 @@
 """data_cleaner.py.
 
-This module defines the DataCleaner class, which encapsulates all logic related to
-cleaning and preparing raw evaluation data for downstream analysis or modeling.
+This module defines the `DataCleaner` class, which encapsulates all logic related to
+validating, cleaning, and preparing raw evaluation data for downstream analysis or modeling.
 
-The class is designed with a single responsibility: to take a raw pandas DataFrame
-and return a cleaned version based on a provided column configuration. It performs
-input validation, optional filtering of ambiguous records, and standardization of
-label columns including handling of missing values and formatting of codes.
+Overview:
+    The `DataCleaner` class is designed with a single responsibility: to transform a raw
+    pandas DataFrame into a cleaned and standardized version based on a provided column
+    configuration. It performs input validation, optional filtering of ambiguous records,
+    and formatting of label columns, including handling of missing values and code padding.
 
-Usage:
-    cleaner = DataCleaner(raw_df, column_config)
-    clean_df = cleaner.process()
+Usage Example:
+    >>> cleaner = DataCleaner(column_config)
+    >>> clean_df = cleaner.process(raw_df)
 
-Features:
-- Validates required columns and configuration consistency.
-- Optionally filters out ambiguous records based on a flag.
-- Cleans and standardizes label columns using safe formatting rules.
-- Handles missing value formats and preserves data integrity.
+Key Features:
+    - Validates the presence and consistency of required columns.
+    - Optionally filters out ambiguous records based on a configuration flag.
+    - Cleans and standardizes label columns using safe formatting rules.
+    - Replaces common missing value formats with `np.nan` to ensure consistency.
+    - Preserves the original input DataFrame by operating on a copy.
 
-Note:
-    This module disables pylint's 'too-few-public-methods' warning as the class is
-    intentionally minimal and focused on a single processing method.
+Dependencies:
+    - pandas
+    - numpy
+
+See Also:
+    - ColumnConfig: Defines the schema and flags used during validation and cleaning.
+    - DataCleaner.process: Main entry point for executing the full cleaning pipeline.
 """
-
 from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
 
-from survey_assist_utils.configs.column_config import (
-    ColumnConfig,
-)
+from survey_assist_utils.configs.column_config import ColumnConfig
 
 _SIC_CODE_PADDING = 5
 
 
-# Its only responsibility is to take a raw DataFrame and return a clean one.
 # pylint: disable=too-few-public-methods
 class DataCleaner:
-    """Handles the cleaning and validation of the raw evaluation DataFrame."""
+    """Handles the validation, filtering, and cleaning of a raw evaluation DataFrame.
+
+    This class provides a structured pipeline for preparing data for analysis or modeling.
+    It uses a configurable column schema to validate required inputs, filter out ambiguous
+    records, and standardize label columns.
+
+    Key Methods:
+        - `__init__`: Initializes the cleaner with a column configuration.
+        - `process`: Main entry point that orchestrates validation, filtering, and cleaning.
+        - `_validate_inputs`: Ensures all required columns are present and consistent.
+        - `_filter_unambiguous`: Optionally filters rows based on the 'Unambiguous' column.
+        - `_clean_dataframe`: Standardizes label columns and handles missing values.
+
+    Attributes:
+        _MISSING_VALUE_FORMATS (list[str]): A list of string representations of missing values
+        that are replaced with `np.nan` during cleaning.
+    """
 
     _MISSING_VALUE_FORMATS: ClassVar[list[str]] = [
         "",
@@ -49,50 +67,53 @@ class DataCleaner:
         "<NA>",
     ]
 
-    def __init__(self, df: pd.DataFrame, column_config: ColumnConfig):
-        """Initializes the data processing class with a DataFrame and column configuration.
+    def __init__(self, column_config: ColumnConfig):
+        """Initialize the data processing class with a column configuration.
 
         Args:
-            df (pd.DataFrame): The input DataFrame to be cleaned and processed.
             column_config (ColumnConfig): Configuration object specifying column-related
-                metadata such as which columns to clean, filter, or validate.
-
-        Notes:
-            A copy of the input DataFrame is stored internally to avoid modifying the original
-            data.
+                metadata, including which columns to clean, filter, or validate.
         """
-        self.df = df.copy()
         self.config = column_config
 
-    def process(self) -> pd.DataFrame:
-        """Executes the full data cleaning and preparation pipeline.
+    def process(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Execute the full data cleaning and preparation pipeline.
 
-        This method sequentially performs input validation, filters out ambiguous data,
-        and applies cleaning operations to the internal DataFrame. It is intended to be
-        the main entry point for preparing the dataset for downstream tasks.
+        This method performs the following steps in sequence:
+        - Validates that all required inputs and configurations are present.
+        - Filters out ambiguous records if configured to do so.
+        - Applies cleaning operations to standardize label columns and handle missing values.
+
+        This method serves as the main entry point for preparing the dataset for
+        downstream analysis.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame to process.
 
         Returns:
-            pd.DataFrame: The cleaned and processed DataFrame ready for analysis or modeling.
+            pd.DataFrame: A cleaned and processed DataFrame ready for analysis.
         """
-        self._validate_inputs()
-        self._filter_unambiguous()
-        self._clean_dataframe()
-        return self.df
+        self._validate_inputs(df)
+        df = self._filter_unambiguous(df)
+        df = self._clean_dataframe(df)
 
-    def _validate_inputs(self):
-        """Validates that all required inputs and configurations are present and consistent.
+        return df
+
+    # REFACTOR: This method now accepts a DataFrame to validate against.
+    def _validate_inputs(self, df: pd.DataFrame):
+        """Validate that all required inputs and configurations are present and consistent.
 
         This method performs the following checks:
-        - Ensures that all required columns, as specified in the column configuration,
-        are present in the DataFrame.
-        - If `filter_unambiguous` is enabled in the configuration, checks for the presence
-        of the 'Unambiguous' column.
-        - Verifies that the number of model label columns matches the number of model score columns.
+        - Ensures all required columns, as specified in the column configuration, are present in the DataFrame.
+        - If `filter_unambiguous` is enabled, verifies that the 'Unambiguous' column exists.
+        - Confirms that the number of model label columns matches the number of model score columns.
+
+        Args:
+            df (pd.DataFrame): The DataFrame to validate.
 
         Raises:
             ValueError: If any required columns are missing from the DataFrame.
-            ValueError: If the number of model label columns does not match the number of
-            model score columns.
+            ValueError: If the number of model label columns does not match the number of model score columns.
         """
         required_cols = [
             self.config.id_col,
@@ -103,7 +124,7 @@ class DataCleaner:
         if self.config.filter_unambiguous:
             required_cols.append("Unambiguous")
 
-        if missing_cols := [col for col in required_cols if col not in self.df.columns]:
+        if missing_cols := [col for col in required_cols if col not in df.columns]:
             raise ValueError(f"Missing required columns: {missing_cols}")
 
         if len(self.config.model_label_cols) != len(self.config.model_score_cols):
@@ -111,40 +132,44 @@ class DataCleaner:
                 "Number of model label columns must match number of score columns"
             )
 
-    def _filter_unambiguous(self):
-        """Filters the DataFrame to retain only unambiguous records, if configured to do so.
+    # REFACTOR: This method now accepts a DataFrame, filters it, and returns the result.
+    def _filter_unambiguous(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Filter the DataFrame to retain only unambiguous records, if configured to do so.
 
-        This method checks whether the `filter_unambiguous` flag is enabled in the column
-        configuration. If so, it attempts to filter the DataFrame based on the 'Unambiguous'
-        column. If the column exists and is not already of boolean type, it attempts to
-        convert string values ('true'/'false') to boolean.
+        If the `filter_unambiguous` flag is enabled in the configuration, this method filters
+        the DataFrame based on the 'Unambiguous' column. It handles the following cases:
 
-        Notes:
-            - If the 'Unambiguous' column is missing, the method exits without filtering.
-            - Non-boolean 'Unambiguous' values are converted using a case-insensitive mapping.
+        - If the 'Unambiguous' column is missing, no filtering is applied.
+        - If the column exists but is not of boolean type, it attempts to convert string values
+        ('true'/'false') to booleans using a case-insensitive mapping.
+        - Rows where 'Unambiguous' is `True` are retained; all others are excluded.
 
-        Modifies:
-            self.df (pd.DataFrame): Filters rows in-place to include only those where
-            'Unambiguous' is True.
+        Args:
+            df (pd.DataFrame): The input DataFrame to filter.
+
+        Returns:
+            pd.DataFrame: A filtered DataFrame containing only unambiguous records, or the
+            original DataFrame if filtering is not applied.
         """
         if self.config.filter_unambiguous:
-            if "Unambiguous" not in self.df.columns:
-                return
-            if self.df["Unambiguous"].dtype != bool:
-                self.df["Unambiguous"] = (
-                    self.df["Unambiguous"]
-                    .str.lower()
-                    .map({"true": True, "false": False})
+            if "Unambiguous" not in df.columns:
+                return df
+            if df["Unambiguous"].dtype != bool:
+                df["Unambiguous"] = (
+                    df["Unambiguous"].str.lower().map({"true": True, "false": False})
                 )
-            self.df = self.df[self.df["Unambiguous"]]
+            return df[df["Unambiguous"]]
+        return df
 
     @staticmethod
+    # def _safe_zfill(value: Any) -> Any:@staticmethod
     def _safe_zfill(value: Any) -> Any:
-        """Safely pads a numeric value with leading zeros to ensure a 5-digit string format.
+        """Safely pad a value with leading zeros to ensure a 5-digit string format.
 
-        This method is typically used for standardizing codes (e.g., SIC codes) by converting
+        This method is typically used to standardize codes (e.g., SIC codes) by converting
         numeric values to zero-padded strings. It handles edge cases gracefully by:
-        - Returning the original value if it is NaN or in a predefined list of exceptions
+
+        - Returning the original value if it is `NaN` or in a predefined list of exceptions
         (e.g., "4+", "-9").
         - Attempting to convert the value to a float, then to an integer, and finally to a
         zero-padded string.
@@ -164,32 +189,41 @@ class DataCleaner:
         except (ValueError, TypeError):
             return value
 
-    def _clean_dataframe(self):
-        """Cleans the DataFrame by standardizing label columns and handling missing values.
+    def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Clean the DataFrame by standardizing label columns and handling missing values.
 
         This method performs the following operations:
-        - Converts all model and clerical label columns to string type to ensure consistency.
-        - Replaces predefined missing value formats (e.g., placeholders like "NA", "-9") with
-         `np.nan`.
-        - Applies `_safe_zfill` to each label column to standardize formatting (e.g., padding
-        numeric codes).
+        - Converts all model and clerical label columns to string type for consistency.
+        - Replaces predefined missing value formats (e.g., "NA", "-9") with `np.nan`.
+        - Applies `_safe_zfill` to each label column to standardize formatting (e.g., padding numeric codes).
 
         Notes:
             - The columns to be cleaned are determined by combining `model_label_cols` and
-            `clerical_label_cols`
-            from the column configuration.
-            - `_safe_zfill` is used to ensure consistent formatting of values such as SIC
-            codes.
+            `clerical_label_cols` from the column configuration.
+            - `_safe_zfill` ensures consistent formatting of values such as SIC codes.
 
-        Modifies:
-            self.df (pd.DataFrame): Updates label columns in-place with cleaned and
-            standardized values.
+        Returns:
+            pd.DataFrame: A cleaned DataFrame with standardized label columns.
         """
         label_cols = self.config.model_label_cols + self.config.clerical_label_cols
-        self.df[label_cols] = self.df[label_cols].astype(str)
-        self.df[label_cols] = self.df[label_cols].replace(
-            self._MISSING_VALUE_FORMATS, np.nan
-        )
+        df[label_cols] = df[label_cols].astype(str)
+        df[label_cols] = df[label_cols].replace(self._MISSING_VALUE_FORMATS, np.nan)
 
         for col in label_cols:
-            self.df[col] = self.df[col].apply(self._safe_zfill)
+            df[col] = df[col].apply(self._safe_zfill)
+
+        return df
+
+
+from typing import Any, ClassVar
+
+import pandas as pd
+
+from survey_assist_utils.configs.column_config import (
+    ColumnConfig,
+)
+
+_SIC_CODE_PADDING = 5
+
+
+# Its only responsibility is to take a raw DataFrame and return a clean one.
