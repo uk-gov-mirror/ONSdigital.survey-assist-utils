@@ -1,9 +1,8 @@
-"""
-This module defines the JsonProcessor class, which is responsible for
+"""This module defines the JsonProcessor class, which is responsible for
 processing raw, local JSON output files from Survey Assist.
 """
+
 import json
-from typing import Any
 
 import pandas as pd
 
@@ -11,9 +10,10 @@ import pandas as pd
 class JsonProcessor:
     """Handles the processing of a raw LLM JSON file into a clean DataFrame."""
 
-    def flatten_json_file(self, file_path: str, max_candidates: int = 5) -> pd.DataFrame:
-        """
-        Reads LLM response JSON data from a local file and flattens it.
+    def flatten_json_file(
+        self, file_path: str, max_candidates: int = 5
+    ) -> pd.DataFrame:
+        """Reads LLM response JSON data from a local file and flattens it.
 
         Args:
             file_path (str): The local path to the JSON file.
@@ -23,7 +23,7 @@ class JsonProcessor:
             pd.DataFrame: A DataFrame with the flattened JSON data.
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 json_data = json.load(f)
         except FileNotFoundError:
             print(f"Error: File not found at {file_path}")
@@ -47,7 +47,9 @@ class JsonProcessor:
                 if i < len(candidates) and isinstance(candidates[i], dict):
                     candidate = candidates[i]
                     flat_record[f"candidate_{i+1}_sic_code"] = candidate.get("sic_code")
-                    flat_record[f"candidate_{i+1}_likelihood"] = candidate.get("likelihood")
+                    flat_record[f"candidate_{i+1}_likelihood"] = candidate.get(
+                        "likelihood"
+                    )
                 else:
                     flat_record[f"candidate_{i+1}_sic_code"] = None
                     flat_record[f"candidate_{i+1}_likelihood"] = None

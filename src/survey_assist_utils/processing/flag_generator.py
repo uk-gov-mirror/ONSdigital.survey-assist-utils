@@ -1,9 +1,8 @@
-"""
-This module defines the FlagGenerator class, which is responsible for adding
+"""This module defines the FlagGenerator class, which is responsible for adding
 data quality and codability flags to a raw evaluation DataFrame.
 """
+
 import re
-from typing import Any
 
 import pandas as pd
 
@@ -14,8 +13,7 @@ _X_COUNT_FOR_MATCH_2 = 3
 
 
 class FlagGenerator:
-    """
-    Adds data quality and codability flag columns to a DataFrame.
+    """Adds data quality and codability flag columns to a DataFrame.
 
     This class takes a raw DataFrame containing human-coded SIC labels and
     enriches it with several analytical columns, including 'Unambiguous',
@@ -47,8 +45,7 @@ class FlagGenerator:
         return flags
 
     def add_flags(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Main method to add all data quality flag columns to the DataFrame.
+        """Main method to add all data quality flag columns to the DataFrame.
 
         Args:
             df (pd.DataFrame): The input DataFrame.
@@ -59,7 +56,8 @@ class FlagGenerator:
         df_out = df.copy()
 
         clerical_cols = [
-            col for col in df.columns
+            col
+            for col in df.columns
             if col.startswith("sic_ind_occ") and col != "sic_ind_occ_flag"
         ]
 
@@ -78,12 +76,19 @@ class FlagGenerator:
 
         # --- 3. Unambiguous Flag ---
         if "Match_5_digits" in df_out.columns:
-            df_out["Unambiguous"] = (df_out["num_answers"] == 1) & (df_out["Match_5_digits"])
+            df_out["Unambiguous"] = (df_out["num_answers"] == 1) & (
+                df_out["Match_5_digits"]
+            )
         else:
             df_out["Unambiguous"] = False
 
         # Convert flag columns to a proper boolean type
-        for flag_col in ["Match_5_digits", "Match_3_digits", "Match_2_digits", "Unambiguous"]:
+        for flag_col in [
+            "Match_5_digits",
+            "Match_3_digits",
+            "Match_2_digits",
+            "Unambiguous",
+        ]:
             if flag_col in df_out.columns:
                 df_out[flag_col] = df_out[flag_col].astype("boolean")
 

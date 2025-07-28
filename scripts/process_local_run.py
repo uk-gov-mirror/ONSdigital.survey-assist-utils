@@ -1,11 +1,13 @@
-"""
-Runner script to process a local JSON output file and merge it with cleaned
+"""Runner script to process a local JSON output file and merge it with cleaned
 and flagged ground truth data.
 
 Example Invocation:
-python scripts/process_local_run.py "data/json_runs/20250620_153641_output.json" --raw_data cleaned_data.csv --output this_file.csv
+python scripts/process_local_run.py "data/json_runs/20250620_153641_output.json"
+  --raw_data data/cleaned_data/cleaned_DSC_Rep_Sample.csv
+  --output data/final_processed_output.csv
 
 """
+
 import argparse
 
 import pandas as pd
@@ -17,8 +19,7 @@ from survey_assist_utils.processing.json_processor import JsonProcessor
 
 
 def main(json_file_path: str, raw_data_path: str, output_path: str):
-    """
-    Main function to orchestrate the data processing pipeline.
+    """Main function to orchestrate the data processing pipeline.
 
     Args:
         json_file_path (str): Path to the raw JSON output file from the model.
@@ -30,7 +31,9 @@ def main(json_file_path: str, raw_data_path: str, output_path: str):
     # --- Step 1: Load the raw ground truth data ---
     try:
         raw_ground_truth_df = pd.read_csv(raw_data_path, dtype=str)
-        print(f"Successfully loaded raw ground truth data. Shape: {raw_ground_truth_df.shape}")
+        print(
+            f"Successfully loaded raw ground truth data. Shape: {raw_ground_truth_df.shape}"
+        )
     except FileNotFoundError:
         print(f"Error: Raw data file not found at {raw_data_path}")
         return
@@ -84,7 +87,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--raw_data",
         type=str,
-        default="/home/user/survey-assist-utils/data/evaluation_data/DSC_Rep_Sample.csv",
+        default="data/cleaned_data/cleaned_DSC_Rep_Sample.csv",
         help="The path to the raw ground truth CSV file.",
     )
     parser.add_argument(
