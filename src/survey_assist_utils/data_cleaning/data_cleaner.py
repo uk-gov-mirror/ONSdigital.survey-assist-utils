@@ -28,6 +28,7 @@ See Also:
     - ColumnConfig: Defines the schema and flags used during validation and cleaning.
     - DataCleaner.process: Main entry point for executing the full cleaning pipeline.
 """
+
 from typing import Any, ClassVar
 
 import numpy as np
