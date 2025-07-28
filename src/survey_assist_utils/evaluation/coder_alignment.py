@@ -15,15 +15,15 @@ from datetime import datetime
 from typing import Any, Optional, Union
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# REFACTOR: Import the moved classes from their new locations.
+# Import the moved classes from their new locations.
 from survey_assist_utils.configs.column_config import ColumnConfig
 from survey_assist_utils.data_cleaning.data_cleaner import DataCleaner
 
 
-# REFACTOR: A new dataclass to handle plotting arguments cleanly.
 @dataclass
 class PlotConfig:
     """Configuration for plotting functions."""
@@ -33,8 +33,6 @@ class PlotConfig:
     filename: Optional[str] = None
 
 
-# REFACTOR: A new dataclass for the confusion matrix to keep the main
-# function signature clean and within linting limits.
 @dataclass
 class ConfusionMatrixConfig:
     """Configuration for the confusion matrix plot."""
@@ -44,14 +42,8 @@ class ConfusionMatrixConfig:
     top_n: int = 10
 
 
-# REFACTOR: The DataCleaner class has been moved to its own file in
-# survey_assist_utils/data_cleaning/data_cleaner.py
-
-
-# REFACTOR: This new class handles all numerical metric calculations.
-# It takes a CLEAN DataFrame and focuses only on computation.
 class MetricCalculator:
-    """Calculates all numerical evaluation metrics."""
+    """Calculates all numerical evaluation metrics from a clean DataFrame."""
 
     def __init__(self, df: pd.DataFrame, column_config: ColumnConfig):
         """Initialises the MetricCalculator.
@@ -124,128 +116,88 @@ class MetricCalculator:
 
     def get_accuracy(
         self, threshold: float = 0.0, match_type: str = "full", extended: bool = False
-    ) -> Union[float, dict[str, float]]:
+    ) -> Union[float, dict[str, Any]]:
         """Calculate accuracy for predictions above a confidence threshold.
 
         Args:
-            threshold (float): Minimum confidence score threshold.
-            match_type (str): The type of accuracy to calculate.
-                            Options: 'full' (default) or '2-digit'.
-            extended (bool): If True, returns a dictionary with detailed accuracy metrics.
-                            If False, returns only the accuracy percentage.
+            threshold (float): Minimum confidence score threshold. Defaults to 0.0.
+            match_type (str): 'full' or '2-digit'. Defaults to "full".
+            extended (bool): If True, returns a detailed dictionary. Defaults to False.
 
         Returns:
-            Union[float, dict[str, float]]:
-                - If extended is False: Accuracy as a percentage (float).
-                - If extended is True: A dictionary containing:
-                    - 'accuracy_percent' (float): Accuracy as a percentage.
-                    - 'matches' (int): Number of matching predictions.
-                    - 'non_matches' (int): Number of non-matching predictions.
-                    - 'total_considered' (int): Total number of predictions considered.
+            Union[float, dict[str, Any]]: The accuracy percentage or a detailed dictionary.
         """
-        # set a default return value:
-        if match_type == "2-digit":
-            correct_col = "is_correct_2_digit"
-        elif match_type == "full":
-            correct_col = "is_correct"
-        else:
-            raise ValueError("match_type must be 'full' or '2-digit'")
-
-        if correct_col not in self.df.columns:
-            raise RuntimeError(
-                f"Derived column '{correct_col}' not found. Ensure _add_derived_columns ran."
+        correct_col = "is_correct_2_digit" if match_type == "2-digit" else "is_correct"
+        filtered_df = self.df[self.df["max_score"] >= threshold]
+        total = len(filtered_df)
+        if total == 0:
+            return (
+                {"accuracy_percent": 0.0, "matches": 0, "total_considered": 0}
+                if extended
+                else 0.0
             )
 
-        # 1. Filter the DataFrame based on the confidence threshold
-        filtered_df = self.df[self.df["max_score"] >= threshold]
-        total_in_subset = len(filtered_df)
+        matches = filtered_df[correct_col].sum()
+        accuracy = 100 * matches / total
 
-        # Handle the edge case where no data meets the threshold
-        if total_in_subset == 0:
-            if extended:
-                return {
-                    "accuracy_percent": 0.0,
-                    "matches": 0,
-                    "non_matches": 0,
-                    "total_considered": 0,
-                }
-            return 0.0
-
-        # 2. Calculate the raw counts
-        match_count = filtered_df[correct_col].sum()
-        non_match_count = total_in_subset - match_count
-
-        # 3. Calculate the percentage
-        accuracy_percent = 100 * match_count / total_in_subset
-
-        # 4. Return all values in a structured dictionary
         if extended:
-            return_value = {
-                "accuracy_percent": round(accuracy_percent, 1),
-                "matches": int(match_count),
-                "non_matches": int(non_match_count),
-                "total_considered": total_in_subset,
+            return {
+                "accuracy_percent": round(accuracy, 1),
+                "matches": int(matches),
+                "non_matches": int(total - matches),
+                "total_considered": total,
             }
-        else:
-            return_value = accuracy_percent
+        return accuracy
 
-        return return_value
+    def get_coverage(self, threshold: float = 0.0) -> float:
+        """Calculate the percentage of predictions above a confidence threshold.
 
-    def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
-        """Assesses the value add of a single candidate column using vectorised operations."""
-        primary_clerical_col = self.config.clerical_label_cols[0]
-        if (
-            candidate_col not in self.df.columns
-            or primary_clerical_col not in self.df.columns
-        ):
-            raise ValueError("Candidate or primary clerical column not found.")
+        Args:
+            threshold (float): Minimum confidence score threshold. Defaults to 0.0.
 
-        # Create a working copy with only necessary, non-null candidate predictions
-        working_df = self.df[
-            [self.config.id_col, candidate_col, *self.config.clerical_label_cols]
-        ].dropna(subset=[candidate_col])
-        total_considered = len(working_df)
+        Returns:
+            float: Coverage as a percentage.
+        """
+        return 100 * (self.df["max_score"] >= threshold).mean()
 
-        if total_considered == 0:
-            return {"candidate_column": candidate_col, "total_predictions_made": 0}
+    def get_threshold_stats(
+        self, thresholds: Optional[list[float]] = None
+    ) -> pd.DataFrame:
+        """Calculate accuracy and coverage across multiple thresholds.
 
-        # --- Primary Match ---
-        primary_match_mask = (
-            working_df[candidate_col] == working_df[primary_clerical_col]
-        )
-        primary_match_count = primary_match_mask.sum()
+        Args:
+            thresholds (Optional[list[float]]): A list of thresholds to evaluate.
+                                                Defaults to a range from 0 to 1.
 
-        # --- Any Clerical Match ---
-        clerical_melted = working_df.melt(
-            id_vars=[self.config.id_col, candidate_col],
-            value_vars=self.config.clerical_label_cols,
-            value_name="clerical_label",
-        ).dropna(subset=["clerical_label"])
+        Returns:
+            pd.DataFrame: A DataFrame with columns for threshold, accuracy, and coverage.
+        """
+        if thresholds is None:
+            thresholds = np.linspace(0, 1, 21).tolist()
+        stats = [
+            {
+                "threshold": t,
+                "accuracy": self.get_accuracy(t),
+                "coverage": self.get_coverage(t),
+            }
+            for t in thresholds
+        ]
+        return pd.DataFrame(stats)
 
-        any_match_mask = (
-            clerical_melted[candidate_col] == clerical_melted["clerical_label"]
-        )
-        any_match_ids = clerical_melted[any_match_mask][self.config.id_col].unique()
-        any_match_count = len(any_match_ids)
+    def get_summary_stats(self) -> dict[str, Any]:
+        """Get a dictionary of summary statistics for the classification results.
 
+        Returns:
+            dict[str, Any]: A dictionary containing various summary statistics.
+        """
         return {
-            "candidate_column": candidate_col,
-            "total_predictions_made": total_considered,
-            "primary_match_percent": round(
-                100 * primary_match_count / total_considered, 2
-            ),
-            "primary_match_count": int(primary_match_count),
-            "any_clerical_match_percent": round(
-                100 * any_match_count / total_considered, 2
-            ),
-            "any_clerical_match_count": int(any_match_count),
+            "total_samples": len(self.df),
+            "overall_accuracy": self.get_accuracy(),
+            "accuracy_above_0.80": self.get_accuracy(0.8),
+            "coverage_above_0.80": self.get_coverage(0.8),
         }
 
-    # ... other metric methods like get_coverage etc. would go here ...
 
-
-# REFACTOR: This new class handles all plotting.
-# It takes a DataFrame that has already been processed by the MetricCalculator.
 class Visualizer:
     """Handles all visualization tasks."""
 
@@ -259,6 +211,36 @@ class Visualizer:
         self.df = df
         self.calculator = calculator
 
+    def plot_threshold_curves(self, plot_config: Optional[PlotConfig] = None):
+        """Plots accuracy and coverage curves against confidence thresholds.
+
+        Args:
+            plot_config (Optional[PlotConfig]): Configuration for saving and styling.
+        """
+        if plot_config is None:
+            plot_config = PlotConfig(figsize=(10, 6))
+
+        stats_df = self.calculator.get_threshold_stats()
+        plt.figure(figsize=plot_config.figsize)
+        plt.plot(stats_df["threshold"], stats_df["coverage"], label="Coverage")
+        plt.plot(stats_df["threshold"], stats_df["accuracy"], label="Accuracy")
+        plt.xlabel("Confidence threshold")
+        plt.ylabel("Percentage")
+        plt.grid(True)
+        plt.legend()
+        plt.title("Coverage and Accuracy vs Confidence Threshold")
+        plt.tight_layout()
+
+        if plot_config.save:
+            if not plot_config.filename:
+                raise ValueError(
+                    "Filename must be provided in PlotConfig when save=True."
+                )
+            plt.savefig(plot_config.filename)
+            plt.close()
+        else:
+            plt.show()
+
     def plot_confusion_heatmap(
         self,
         matrix_config: ConfusionMatrixConfig,
@@ -268,7 +250,7 @@ class Visualizer:
 
         Args:
             matrix_config (ConfusionMatrixConfig): Config specifying columns and top_n.
-            plot_config (PlotConfig, optional): Config for saving and styling.
+            plot_config (Optional[PlotConfig]): Config for saving and styling.
         """
         if plot_config is None:
             plot_config = PlotConfig()
@@ -321,9 +303,7 @@ class Visualizer:
 
 
 class LabelAccuracy:
-    """Orchestrates the data cleaning, metric calculation, and visualization
-    for coder alignment analysis.
-    """
+    """Orchestrates data cleaning, metric calculation, and visualization."""
 
     def __init__(self, df: pd.DataFrame, column_config: ColumnConfig):
         """Initialises the full analysis pipeline.
@@ -332,62 +312,35 @@ class LabelAccuracy:
             df (pd.DataFrame): The raw input DataFrame.
             column_config (ColumnConfig): The configuration for the analysis.
         """
-        # Step 1: Clean and prepare the data
         cleaner = DataCleaner(df, column_config)
         clean_df = cleaner.process()
-
-        # Step 2: Initialise the calculator with the clean data
         self.calculator = MetricCalculator(clean_df, column_config)
-
-        # The final, processed DataFrame is stored here for inspection
         self.df = self.calculator.df
-
-        # Step 3: Initialise the visualiser
         self.visualizer = Visualizer(self.df, self.calculator)
 
-    # REFACTOR: Public methods now delegate their calls to the appropriate helper class.
-    # This makes the LabelAccuracy class very simple and easy to read.
-    def get_accuracy(self, **kwargs):
-        """Calculate accuracy for predictions above a confidence threshold.
-
-        Args:
-            **kwargs: Arguments to pass to the calculator's get_accuracy method.
-
-        Returns:
-            The accuracy metric.
-        """
+    def get_accuracy(self, **kwargs) -> Union[float, dict[str, Any]]:
+        """Delegates call to MetricCalculator.get_accuracy."""
         return self.calculator.get_accuracy(**kwargs)
 
-    def get_jaccard_similarity(self, **kwargs):
-        """Calculates the average Jaccard Similarity Index.
-
-        Args:
-            **kwargs: Arguments to pass to the calculator's get_jaccard_similarity.
-
-        Returns:
-            The Jaccard similarity score.
-        """
+    def get_jaccard_similarity(self, **kwargs) -> float:
+        """Delegates call to MetricCalculator.get_jaccard_similarity."""
         return self.calculator.get_jaccard_similarity(**kwargs)
 
-    def plot_confusion_heatmap(self, **kwargs):
-        """Generates and displays a confusion matrix heatmap.
+    def get_coverage(self, **kwargs) -> float:
+        """Delegates call to MetricCalculator.get_coverage."""
+        return self.calculator.get_coverage(**kwargs)
 
-        Args:
-            **kwargs: Arguments to pass to the visualizer's plot_confusion_heatmap.
-        """
+    def get_summary_stats(self, **kwargs) -> dict[str, Any]:
+        """Delegates call to MetricCalculator.get_summary_stats."""
+        return self.calculator.get_summary_stats(**kwargs)
+
+    def plot_confusion_heatmap(self, **kwargs):
+        """Delegates call to Visualizer.plot_confusion_heatmap."""
         return self.visualizer.plot_confusion_heatmap(**kwargs)
 
-    def get_candidate_contribution(self, **kwargs):
-        """
-
-        Args:
-            **kwargs: Arguments to pass to the calculator's get_candidate_contribution.
-        """
-        return self.calculator.get_candidate_contribution(**kwargs)
-                
-
-    # ... you would add similar passthrough methods for all other public functions ...
-    # e.g., get_coverage, get_summary_stats, plot_threshold_curves etc.
+    def plot_threshold_curves(self, **kwargs):
+        """Delegates call to Visualizer.plot_threshold_curves."""
+        return self.visualizer.plot_threshold_curves(**kwargs)
 
     @staticmethod
     def save_output(metadata: dict, eval_result: dict, save_path: str = "data/") -> str:
@@ -403,22 +356,18 @@ class LabelAccuracy:
         """
         if not metadata:
             raise ValueError("Metadata dictionary cannot be empty")
-
         dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
         folder_name = os.path.join(
             save_path, f"outputs/{dt_str}_{metadata.get('evaluation_type', 'unnamed')}"
         )
         os.makedirs(folder_name, exist_ok=True)
-
         with open(
             os.path.join(folder_name, "metadata.json"), "w", encoding="utf-8"
         ) as f:
             json.dump(metadata, f, indent=4)
-
         with open(
             os.path.join(folder_name, "evaluation_result.json"), "w", encoding="utf-8"
         ) as f:
             json.dump(eval_result, f, indent=4)
-
         print(f"Successfully saved all outputs to {folder_name}")
         return folder_name
