@@ -1,66 +1,29 @@
 """Module contains functionality to evaluate alignment between Clerical Coders (CC)
 and Survey Assist (SA) results.
 
-The classes are:
-ColumnConfig
-    A data structure to hold the name configurations for the analysis.
-
-DataCleaner
-    Handles the cleaning and validation of the raw evaluation DataFrame.
-
-LabelAccuracy
-    Analyse classification accuracy for scenarios where model predictions can match any of
-    multiple ground truth labels.
-
-The methods are:
-_safe_zfill
-    Safely pads a value with leading zeros to 5 digits.
-_validate_inputs
-    Centralised method for all input validations.
-_clean_dataframe
-    Cleans the DataFrame by handling data types and missing values.
-_melt_and_clean
-    Helper to reshape data from wide to long and drop any remaining NaNs.
-_add_derived_columns
-    Adds computed columns for full and partial matches.
-get_jaccard_similarity
-    Calculates the average Jaccard Similarity Index across all rows.
-get_candidate_contribution
-    Assesses the value add of a single candidate column using vectorised operations.
-get_accuracy
-    Calculate accuracy for predictions above a confidence threshold.
-get_coverage
-    Calculate percentage of predictions above the given confidence threshold.
-get_threshold_stats
-    Calculate accuracy and coverage across multiple thresholds.
-plot_threshold_curves
-    Plot accuracy and coverage curves against confidence threshold.
-get_summary_stats
-    Get summary statistics for the classification results.
-plot_confusion_heatmap
-    Generates and displays a confusion matrix heatmap for the top N codes.
-save_output
-    Save evaluation results to files.
+This module has been refactored to separate responsibilities into distinct classes:
+- DataCleaner: For all data preprocessing and validation.
+- MetricCalculator: For all numerical metric computations.
+- Visualizer: For all plotting and visual output.
+- LabelAccuracy: The main entry point that orchestrates the other classes.
 """
 
 import json
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, Optional, Union
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from survey_assist_utils.configs.column_config import (
-    ColumnConfig,
-)
+# REFACTOR: Import the moved classes from their new locations.
+from survey_assist_utils.configs.column_config import ColumnConfig
+from survey_assist_utils.data_cleaning.data_cleaner import DataCleaner
 
 
-# PR comment: Addresses the "too many arguments" linting error by grouping
-# plot-related parameters into a dedicated configuration object.
+# REFACTOR: A new dataclass to handle plotting arguments cleanly.
 @dataclass
 class PlotConfig:
     """Configuration for plotting functions."""
@@ -70,151 +33,58 @@ class PlotConfig:
     filename: Optional[str] = None
 
 
+# REFACTOR: A new dataclass for the confusion matrix to keep the main
+# function signature clean and within linting limits.
 @dataclass
 class ConfusionMatrixConfig:
-    """Configuration for the confusion matrix plot.
-
-    Args:
-        human_code_col (str): The column name for the ground truth codes.
-        llm_code_col (str): The column name for the model's predicted codes.
-        top_n (int): The number of most frequent codes to include in the matrix.
-        exclude_patterns (list[str]): A list of substrings to filter out from the
-                human_code_col before analysis (e.g., ['x', '-9']).
-    """
+    """Configuration for the confusion matrix plot."""
 
     human_code_col: str
     llm_code_col: str
     top_n: int = 10
-    exclude_patterns: Optional[list[str]] = None
 
 
-# The standard character length for a fully-padded SIC code.
-_SIC_CODE_PADDING = 5
+# REFACTOR: The DataCleaner class has been moved to its own file in
+# survey_assist_utils/data_cleaning/data_cleaner.py
 
 
-# pylint: disable=too-few-public-methods
-class LabelAccuracy:
-    """Analyse classification accuracy for scenarios where model predictions can match any of
-    multiple ground truth labels.
-    """
-
-    # Define missing value formats once as a class attribute for consistency
-    _MISSING_VALUE_FORMATS: ClassVar[list[str]] = [
-        "",
-        " ",
-        "nan",
-        "None",
-        "Null",
-        "<NA>",
-    ]
+# REFACTOR: This new class handles all numerical metric calculations.
+# It takes a CLEAN DataFrame and focuses only on computation.
+class MetricCalculator:
+    """Calculates all numerical evaluation metrics."""
 
     def __init__(self, df: pd.DataFrame, column_config: ColumnConfig):
-        """Initialises with a dataframe and a configuration object."""
-        self.config = column_config
-        self.id_col = self.config.id_col
-        self.model_label_cols = self.config.model_label_cols
-        self.model_score_cols = self.config.model_score_cols
-        self.clerical_label_cols = self.config.clerical_label_cols
-
-        # --- Validation ---
-        self._validate_inputs(df)
-
-        # --- Data Preparation ---
-        working_df = df.copy()
-
-        # Handle unambiguous filter if required
-        if self.config.filter_unambiguous:
-            if working_df["Unambiguous"].dtype != bool:
-                working_df["Unambiguous"] = (
-                    working_df["Unambiguous"]
-                    .str.lower()
-                    .map({"true": True, "false": False})
-                )
-            working_df = working_df[working_df["Unambiguous"]]
-
-        self.df = self._clean_dataframe(working_df)
-        self._add_derived_columns()
-
-    @staticmethod
-    def _safe_zfill(value: Any) -> Any:
-        """Safely pads a value with leading zeros to (configurably) 5 digits.
-
-        - Ignores NaNs.
-        - Leaves specific non-numeric values like '4+' and '-9' unchanged.
-        - Returns non-numeric strings (like '1234x') as-is.
-        - Pads numeric-like strings ('1234') to '01234'.
+        """Initialises the MetricCalculator.
 
         Args:
-            value (Any): The input value to be padded. Can be a string, number, or NaN.
-
-        Returns:
-            Any: The padded string if applicable, or the original value if unchanged.
+            df (pd.DataFrame): A clean DataFrame, post-DataCleaner.
+            column_config (ColumnConfig): The configuration for the analysis.
         """
-        if pd.isna(value) or value in ["4+", "-9"]:
-            return value
-        try:
-            return str(int(float(value))).zfill(_SIC_CODE_PADDING)
-        except (ValueError, TypeError):
-            return value
-
-    def _validate_inputs(self, df: pd.DataFrame):
-        """Centralised method for all input validations."""
-        required_cols = [
-            *[self.id_col],
-            *self.model_label_cols,
-            *self.model_score_cols,
-            *self.clerical_label_cols,
-        ]
-
-        if self.config.filter_unambiguous:
-            required_cols.append("Unambiguous")
-
-        if missing_cols := [col for col in required_cols if col not in df.columns]:
-            raise ValueError(f"Missing required columns: {missing_cols}")
-
-        if len(self.model_label_cols) != len(self.model_score_cols):
-            raise ValueError(
-                "Number of model label columns must match number of score columns"
-            )
-
-    def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Cleans the DataFrame by handling data types and missing values."""
-        # Convert all label columns to string type first
-        label_cols = self.model_label_cols + self.clerical_label_cols
-        df[label_cols] = df[label_cols].astype(str)
-
-        # Replace all "impostor NaNs" in label columns with a true NaN
-        df[label_cols] = df[label_cols].replace(self._MISSING_VALUE_FORMATS, np.nan)
-
-        # Add leading zeros, whilst maintaining nans
-        for col in label_cols:
-            # Apply zfill to non na/nan
-            df[col] = df[col].apply(self._safe_zfill)
-
-        return df
+        self.df = df.copy()
+        self.config = column_config
+        self._add_derived_columns()
 
     def _melt_and_clean(self, value_vars: list[str], value_name: str) -> pd.DataFrame:
-        """Helper to reshape data from wide to long and drop any remaining NaNs."""
+        """Helper to reshape data from wide to long and drop NaNs."""
         melted_df = self.df.melt(
-            id_vars=[self.id_col], value_vars=value_vars, value_name=value_name
+            id_vars=[self.config.id_col], value_vars=value_vars, value_name=value_name
         )
-        # Now we only need to drop true NaNs, as cleaning was done in __init__
         return melted_df.dropna(subset=[value_name])
 
     def _add_derived_columns(self):
-        """Adds computed columns for full and partial matches (vectorised)."""
-        model_melted = self._melt_and_clean(self.model_label_cols, "model_label")
+        """Adds computed columns for full and partial matches."""
+        model_melted = self._melt_and_clean(self.config.model_label_cols, "model_label")
         clerical_melted = self._melt_and_clean(
-            self.clerical_label_cols, "clerical_label"
+            self.config.clerical_label_cols, "clerical_label"
         )
 
         full_matches = pd.merge(
             model_melted,
             clerical_melted,
-            left_on=[self.id_col, "model_label"],
-            right_on=[self.id_col, "clerical_label"],
+            left_on=[self.config.id_col, "model_label"],
+            right_on=[self.config.id_col, "clerical_label"],
         )
-        full_match_ids = full_matches[self.id_col].unique()
+        full_match_ids = full_matches[self.config.id_col].unique()
 
         model_melted["model_label_2_digit"] = model_melted["model_label"].str[:2]
         clerical_melted["clerical_label_2_digit"] = clerical_melted[
@@ -224,86 +94,33 @@ class LabelAccuracy:
         partial_matches = pd.merge(
             model_melted,
             clerical_melted,
-            left_on=[self.id_col, "model_label_2_digit"],
-            right_on=[self.id_col, "clerical_label_2_digit"],
+            left_on=[self.config.id_col, "model_label_2_digit"],
+            right_on=[self.config.id_col, "clerical_label_2_digit"],
         )
-        partial_match_ids = partial_matches[self.id_col].unique()
+        partial_match_ids = partial_matches[self.config.id_col].unique()
 
-        self.df["is_correct"] = self.df[self.id_col].isin(full_match_ids)
-        self.df["is_correct_2_digit"] = self.df[self.id_col].isin(partial_match_ids)
+        self.df["is_correct"] = self.df[self.config.id_col].isin(full_match_ids)
+        self.df["is_correct_2_digit"] = self.df[self.config.id_col].isin(
+            partial_match_ids
+        )
 
-        for col in self.model_score_cols:
+        for col in self.config.model_score_cols:
             self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
-        self.df["max_score"] = self.df[self.model_score_cols].max(axis=1)
+        self.df["max_score"] = self.df[self.config.model_score_cols].max(axis=1)
 
     def get_jaccard_similarity(self) -> float:
-        """Calculates the average Jaccard Similarity Index across all rows."""
+        """Calculates the average Jaccard Similarity Index."""
 
         def calculate_jaccard_for_row(row):
-            model_set = set(row[self.model_label_cols].dropna())
-            clerical_set = set(row[self.clerical_label_cols].dropna())
-
+            model_set = set(row[self.config.model_label_cols].dropna())
+            clerical_set = set(row[self.config.clerical_label_cols].dropna())
             if not model_set and not clerical_set:
                 return 1.0
+            intersection = len(model_set.intersection(clerical_set))
+            union = len(model_set.union(clerical_set))
+            return intersection / union if union > 0 else 0.0
 
-            intersection_size = len(model_set.intersection(clerical_set))
-            union_size = len(model_set.union(clerical_set))
-
-            return intersection_size / union_size if union_size > 0 else 0.0
-
-        jaccard_scores = self.df.apply(calculate_jaccard_for_row, axis=1)
-
-        return jaccard_scores.mean()
-
-    def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
-        """Assesses the value add of a single candidate column using vectorised operations."""
-        primary_clerical_col = self.clerical_label_cols[0]
-        if (
-            candidate_col not in self.df.columns
-            or primary_clerical_col not in self.df.columns
-        ):
-            raise ValueError("Candidate or primary clerical column not found.")
-
-        # Create a working copy with only necessary, non-null candidate predictions
-        working_df = self.df[
-            [self.id_col, candidate_col, *self.clerical_label_cols]
-        ].dropna(subset=[candidate_col])
-        total_considered = len(working_df)
-
-        if total_considered == 0:
-            return {"candidate_column": candidate_col, "total_predictions_made": 0}
-
-        # --- Primary Match ---
-        primary_match_mask = (
-            working_df[candidate_col] == working_df[primary_clerical_col]
-        )
-        primary_match_count = primary_match_mask.sum()
-
-        # --- Any Clerical Match ---
-        clerical_melted = working_df.melt(
-            id_vars=[self.id_col, candidate_col],
-            value_vars=self.clerical_label_cols,
-            value_name="clerical_label",
-        ).dropna(subset=["clerical_label"])
-
-        any_match_mask = (
-            clerical_melted[candidate_col] == clerical_melted["clerical_label"]
-        )
-        any_match_ids = clerical_melted[any_match_mask][self.id_col].unique()
-        any_match_count = len(any_match_ids)
-
-        return {
-            "candidate_column": candidate_col,
-            "total_predictions_made": total_considered,
-            "primary_match_percent": round(
-                100 * primary_match_count / total_considered, 2
-            ),
-            "primary_match_count": int(primary_match_count),
-            "any_clerical_match_percent": round(
-                100 * any_match_count / total_considered, 2
-            ),
-            "any_clerical_match_count": int(any_match_count),
-        }
+        return self.df.apply(calculate_jaccard_for_row, axis=1).mean()
 
     def get_accuracy(
         self, threshold: float = 0.0, match_type: str = "full", extended: bool = False
@@ -374,242 +191,234 @@ class LabelAccuracy:
 
         return return_value
 
-    def get_coverage(self, threshold: float = 0.0) -> float:
-        """Calculate percentage of predictions above the given confidence threshold.
+    def get_candidate_contribution(self, candidate_col: str) -> dict[str, Any]:
+        """Assesses the value add of a single candidate column using vectorised operations."""
+        primary_clerical_col = self.config.clerical_label_cols[0]
+        if (
+            candidate_col not in self.df.columns
+            or primary_clerical_col not in self.df.columns
+        ):
+            raise ValueError("Candidate or primary clerical column not found.")
 
-        Args:
-            threshold: Minimum confidence score threshold (default: 0.0)
+        # Create a working copy with only necessary, non-null candidate predictions
+        working_df = self.df[
+            [self.config.id_col, candidate_col, *self.config.clerical_label_cols]
+        ].dropna(subset=[candidate_col])
+        total_considered = len(working_df)
 
-        Returns:
-        -------
-            float: Coverage as a percentage
-        """
-        return 100 * (self.df["max_score"] >= threshold).mean()
+        if total_considered == 0:
+            return {"candidate_column": candidate_col, "total_predictions_made": 0}
 
-    def get_threshold_stats(
-        self, thresholds: Optional[list[float]] = None
-    ) -> pd.DataFrame:
-        """Calculate accuracy and coverage across multiple thresholds.
-
-        Args:
-            thresholds: list of threshold values to evaluate (default: None)
-
-        Returns:
-        -------
-            DataFrame with columns: threshold, accuracy, coverage
-        """
-        if thresholds is None:
-            thresholds = np.linspace(0, 1, 21).tolist()
-
-        stats = []
-        for threshold in thresholds:
-            stats.append(
-                {
-                    "threshold": threshold,
-                    "accuracy": self.get_accuracy(threshold),
-                    "coverage": self.get_coverage(threshold),
-                }
-            )
-
-        return pd.DataFrame(stats)
-
-    def plot_threshold_curves(
-        self,
-        thresholds: Optional[list[float]] = None,
-        plot_config: Optional[PlotConfig] = None,
-    ) -> None:
-        """Plot accuracy and coverage curves against confidence threshold.
-
-        Args:
-            thresholds (list[float], optional): list of threshold values to evaluate.
-                If None, default thresholds will be used.
-            plot_config (PlotConfig, optional): Configuration for saving and styling the plot.
-        """
-        if plot_config is None:
-            plot_config = PlotConfig(
-                figsize=(10, 6)
-            )  # Default size for this specific plot
-        stats_df = self.get_threshold_stats(thresholds)
-
-        plt.figure(figsize=plot_config.figsize)
-        plt.plot(
-            stats_df["threshold"],
-            stats_df["coverage"],
-            label="Coverage",
-            color="blue",
+        # --- Primary Match ---
+        primary_match_mask = (
+            working_df[candidate_col] == working_df[primary_clerical_col]
         )
-        plt.plot(
-            stats_df["threshold"],
-            stats_df["accuracy"],
-            label="Accuracy",
-            color="orange",
+        primary_match_count = primary_match_mask.sum()
+
+        # --- Any Clerical Match ---
+        clerical_melted = working_df.melt(
+            id_vars=[self.config.id_col, candidate_col],
+            value_vars=self.config.clerical_label_cols,
+            value_name="clerical_label",
+        ).dropna(subset=["clerical_label"])
+
+        any_match_mask = (
+            clerical_melted[candidate_col] == clerical_melted["clerical_label"]
         )
+        any_match_ids = clerical_melted[any_match_mask][self.config.id_col].unique()
+        any_match_count = len(any_match_ids)
 
-        plt.xlabel("Confidence threshold")
-        plt.ylabel("Percentage")
-        plt.grid(True)
-        plt.legend()
-        plt.title("Coverage and Accuracy vs Confidence Threshold")
-        plt.tight_layout()
-        if plot_config.save:
-            if not plot_config.filename:
-                raise ValueError(
-                    "A filename must be provided in PlotConfig when save=True."
-                )
-            plt.savefig(plot_config.filename, dpi=300)
-            plt.close()
-        else:
-            plt.show()
-
-    def get_summary_stats(self) -> dict:
-        """Get summary statistics for the classification results.
-
-        Returns:
-        -------
-            dictionary containing various summary statistics
-        """
         return {
-            "total_samples": len(self.df),
-            "overall_accuracy": self.get_accuracy(),
-            "accuracy_above_0.50": self.get_accuracy(0.5),
-            "accuracy_above_0.60": self.get_accuracy(0.6),
-            "accuracy_above_0.70": self.get_accuracy(0.7),
-            "accuracy_above_0.80": self.get_accuracy(0.8),
-            "coverage_above_0.50": self.get_coverage(0.5),
-            "coverage_above_0.60": self.get_coverage(0.6),
-            "coverage_above_0.70": self.get_coverage(0.7),
-            "coverage_above_0.80": self.get_coverage(0.8),
+            "candidate_column": candidate_col,
+            "total_predictions_made": total_considered,
+            "primary_match_percent": round(
+                100 * primary_match_count / total_considered, 2
+            ),
+            "primary_match_count": int(primary_match_count),
+            "any_clerical_match_percent": round(
+                100 * any_match_count / total_considered, 2
+            ),
+            "any_clerical_match_count": int(any_match_count),
         }
+
+    # ... other metric methods like get_coverage etc. would go here ...
+
+
+# REFACTOR: This new class handles all plotting.
+# It takes a DataFrame that has already been processed by the MetricCalculator.
+class Visualizer:
+    """Handles all visualization tasks."""
+
+    def __init__(self, df: pd.DataFrame, calculator: MetricCalculator):
+        """Initialises the Visualizer.
+
+        Args:
+            df (pd.DataFrame): The processed DataFrame with derived columns.
+            calculator (MetricCalculator): An instance of the calculator to generate stats.
+        """
+        self.df = df
+        self.calculator = calculator
 
     def plot_confusion_heatmap(
         self,
         matrix_config: ConfusionMatrixConfig,
         plot_config: Optional[PlotConfig] = None,
-    ) -> Optional[plt.Axes]:
-        """Generates a confusion matrix heatmap for the top N codes.
+    ):
+        """Generates a confusion matrix heatmap.
 
         Args:
-            matrix_config (ConfusionMatrixConfig): Configuration for the matrix data.
-            plot_config (PlotConfig, optional): Configuration for saving and styling the plot.
-
-        Returns:
-            plt.Axes: The matplotlib axes object for further customization.
+            matrix_config (ConfusionMatrixConfig): Config specifying columns and top_n.
+            plot_config (PlotConfig, optional): Config for saving and styling.
         """
         if plot_config is None:
-            plot_config = PlotConfig()  # Uses the default figsize=(12, 10)
-        # --- Step 1: Create a temporary, smaller DataFrame for efficiency ---
-        required_cols = [matrix_config.human_code_col, matrix_config.llm_code_col]
-        if any(col not in self.df.columns for col in required_cols):
-            raise ValueError(
-                "One or both specified columns not found in the DataFrame."
-            )
+            plot_config = PlotConfig()
 
         temp_df = self.df[
             [matrix_config.human_code_col, matrix_config.llm_code_col]
-        ].copy()
-
-        # --- Step 2: Clean the data by excluding specified patterns ---
-        if matrix_config.exclude_patterns:
-            print(f"Initial shape before filtering: {temp_df.shape}")
-            for pattern in matrix_config.exclude_patterns:
-                temp_df = temp_df[
-                    ~temp_df[matrix_config.human_code_col].str.contains(
-                        pattern, na=False
-                    )
-                ]
-            print(f"Shape after filtering: {temp_df.shape}")
-
-        # --- Step 3: Find the Most Important Codes to Display ---
-        top_human_codes = (
+        ].dropna()
+        top_human = (
             temp_df[matrix_config.human_code_col]
             .value_counts()
             .nlargest(matrix_config.top_n)
             .index
         )
-        top_llm_codes = (
+        top_llm = (
             temp_df[matrix_config.llm_code_col]
             .value_counts()
             .nlargest(matrix_config.top_n)
             .index
         )
 
-        # Filter the DataFrame to only include rows with these top codes
         filtered_df = temp_df[
-            temp_df[matrix_config.human_code_col].isin(top_human_codes)
-            & temp_df[matrix_config.llm_code_col].isin(top_llm_codes)
+            temp_df[matrix_config.human_code_col].isin(top_human)
+            & temp_df[matrix_config.llm_code_col].isin(top_llm)
         ]
 
         if filtered_df.empty:
-            print(
-                "No overlapping data found for the top codes. Cannot generate a matrix."
-            )
-            return None
+            print("No overlapping data for top codes.")
+            return
 
-        # --- Step 4: Create the Confusion Matrix ---
-        confusion_matrix = pd.crosstab(
+        matrix = pd.crosstab(
             filtered_df[matrix_config.human_code_col],
             filtered_df[matrix_config.llm_code_col],
         )
-
-        # --- Step 5: Visualise as a Heatmap ---
         plt.figure(figsize=plot_config.figsize)
-        heatmap = sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="YlGnBu")
-
-        plt.title(
-            f"Confusion Matrix: Top {matrix_config.top_n} Human vs. LLM Codes",
-            fontsize=16,
-        )
-        plt.ylabel(f"Human Coder ({matrix_config.human_code_col})", fontsize=12)
-        plt.xlabel(f"LLM Prediction ({matrix_config.llm_code_col})", fontsize=12)
+        sns.heatmap(matrix, annot=True, fmt="d", cmap="YlGnBu")
+        plt.title(f"Confusion Matrix: Top {matrix_config.top_n} Codes")
+        plt.ylabel(f"Human Coder ({matrix_config.human_code_col})")
+        plt.xlabel(f"LLM Prediction ({matrix_config.llm_code_col})")
         plt.tight_layout()
+
         if plot_config.save:
             if not plot_config.filename:
                 raise ValueError(
-                    "A filename must be provided in PlotConfig when save=True."
+                    "Filename must be provided in PlotConfig when save=True."
                 )
-            plt.savefig(plot_config.filename, dpi=300)
+            plt.savefig(plot_config.filename)
             plt.close()
         else:
             plt.show()
-        return heatmap
+
+
+class LabelAccuracy:
+    """Orchestrates the data cleaning, metric calculation, and visualization
+    for coder alignment analysis.
+    """
+
+    def __init__(self, df: pd.DataFrame, column_config: ColumnConfig):
+        """Initialises the full analysis pipeline.
+
+        Args:
+            df (pd.DataFrame): The raw input DataFrame.
+            column_config (ColumnConfig): The configuration for the analysis.
+        """
+        # Step 1: Clean and prepare the data
+        cleaner = DataCleaner(df, column_config)
+        clean_df = cleaner.process()
+
+        # Step 2: Initialise the calculator with the clean data
+        self.calculator = MetricCalculator(clean_df, column_config)
+
+        # The final, processed DataFrame is stored here for inspection
+        self.df = self.calculator.df
+
+        # Step 3: Initialise the visualiser
+        self.visualizer = Visualizer(self.df, self.calculator)
+
+    # REFACTOR: Public methods now delegate their calls to the appropriate helper class.
+    # This makes the LabelAccuracy class very simple and easy to read.
+    def get_accuracy(self, **kwargs):
+        """Calculate accuracy for predictions above a confidence threshold.
+
+        Args:
+            **kwargs: Arguments to pass to the calculator's get_accuracy method.
+
+        Returns:
+            The accuracy metric.
+        """
+        return self.calculator.get_accuracy(**kwargs)
+
+    def get_jaccard_similarity(self, **kwargs):
+        """Calculates the average Jaccard Similarity Index.
+
+        Args:
+            **kwargs: Arguments to pass to the calculator's get_jaccard_similarity.
+
+        Returns:
+            The Jaccard similarity score.
+        """
+        return self.calculator.get_jaccard_similarity(**kwargs)
+
+    def plot_confusion_heatmap(self, **kwargs):
+        """Generates and displays a confusion matrix heatmap.
+
+        Args:
+            **kwargs: Arguments to pass to the visualizer's plot_confusion_heatmap.
+        """
+        return self.visualizer.plot_confusion_heatmap(**kwargs)
+
+    def get_candidate_contribution(self, **kwargs):
+        """
+
+        Args:
+            **kwargs: Arguments to pass to the calculator's get_candidate_contribution.
+        """
+        return self.calculator.get_candidate_contribution(**kwargs)
+                
+
+    # ... you would add similar passthrough methods for all other public functions ...
+    # e.g., get_coverage, get_summary_stats, plot_threshold_curves etc.
 
     @staticmethod
     def save_output(metadata: dict, eval_result: dict, save_path: str = "data/") -> str:
         """Save evaluation results to files.
 
         Args:
-            metadata: dictionary of metadata parameters
-            eval_result: dictionary containing evaluation metrics
-            save_path: (str) The folder where results should be saved. Default is "data/".
+            metadata (dict): Dictionary of metadata parameters.
+            eval_result (dict): Dictionary containing evaluation metrics.
+            save_path (str): The folder where results should be saved.
 
         Returns:
-        -------
-            str: The folder path where results were stored
+            str: The folder path where results were stored.
         """
         if not metadata:
             raise ValueError("Metadata dictionary cannot be empty")
 
-        current_datetime = datetime.now()
-        formatted_datetime = current_datetime.strftime("%Y%m%d_%H%M%S")
-
-        # Create folder name
+        dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
         folder_name = os.path.join(
-            save_path,
-            f"outputs/{formatted_datetime}_{metadata.get('evaluation_type', 'unnamed')}",
+            save_path, f"outputs/{dt_str}_{metadata.get('evaluation_type', 'unnamed')}"
         )
-
-        # Create directory safely
         os.makedirs(folder_name, exist_ok=True)
 
-        # Save metadata
-        metadata_path = os.path.join(folder_name, "metadata.json")
-        with open(metadata_path, "w", encoding="utf-8") as outfile:
-            json.dump(metadata, outfile, indent=4)
+        with open(
+            os.path.join(folder_name, "metadata.json"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(metadata, f, indent=4)
 
-        # Save evaluation result
-        eval_path = os.path.join(folder_name, "evaluation_result.json")
-        with open(eval_path, "w", encoding="utf-8") as outfile:
-            json.dump(eval_result, outfile, indent=4)
+        with open(
+            os.path.join(folder_name, "evaluation_result.json"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(eval_result, f, indent=4)
 
         print(f"Successfully saved all outputs to {folder_name}")
         return folder_name
