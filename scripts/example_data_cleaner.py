@@ -63,9 +63,9 @@ cleaner = DataCleaner(config)
 clean_df = cleaner.process(df)
 
 # Check a specific record for zero-padding
-test_id = "KB056090"
+TEST_ID = "KB056090"
 print("Checking the addition of leading zeros in dataframe:")
-print(clean_df.loc[clean_df["unique_id"] == test_id, coders_list])
+print(clean_df.loc[clean_df["unique_id"] == TEST_ID, coders_list])
 
 # Save the cleaned DataFrame
 clean_df.to_csv("cleaned_data.csv", index=False)
