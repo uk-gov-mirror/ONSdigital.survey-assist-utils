@@ -102,23 +102,24 @@ class DataCleaner:
 
         return working_df
 
-        return df
-
     # REFACTOR: This method now accepts a DataFrame to validate against.
     def _validate_inputs(self, df: pd.DataFrame):
         """Validate that all required inputs and configurations are present and consistent.
 
         This method performs the following checks:
-        - Ensures all required columns, as specified in the column configuration, are present in the DataFrame.
+        - Ensures all required columns, as specified in the column configuration,
+        are present in the DataFrame.
         - If `filter_unambiguous` is enabled, verifies that the 'Unambiguous' column exists.
-        - Confirms that the number of model label columns matches the number of model score columns.
+        - Confirms that the number of model label columns matches the number of model
+        score columns.
 
         Args:
             df (pd.DataFrame): The DataFrame to validate.
 
         Raises:
             ValueError: If any required columns are missing from the DataFrame.
-            ValueError: If the number of model label columns does not match the number of model score columns.
+            ValueError: If the number of model label columns does not match the number of
+            model score columns.
         """
         required_cols = [
             self.config.id_col,
@@ -139,17 +140,16 @@ class DataCleaner:
         # Check the data types of the columns:
         for col in self.config.model_score_cols:
             if (
-                not pd.api.types.is_numeric_dtype(self.df[col])
-                and not pd.to_numeric(self.df[col], errors="coerce").notna().all()
+                not pd.api.types.is_numeric_dtype(df[col])
+                and not pd.to_numeric(df[col], errors="coerce").notna().all()
             ):
                 print(f"Warning: Column '{col}' is not numeric.")
-
 
         # Check that label columns are strings or objects that can be treated as strings
         for col in self.config.model_label_cols + self.config.clerical_label_cols:
             if not pd.api.types.is_string_dtype(
-                self.df[col]
-            ) and not pd.api.types.is_object_dtype(self.df[col]):
+                df[col]
+            ) and not pd.api.types.is_object_dtype(df[col]):
                 print(f"Warning: Label column '{col}' is not of type string or object.")
 
     # REFACTOR: This method now accepts a DataFrame, filters it, and returns the result.
@@ -215,7 +215,8 @@ class DataCleaner:
         This method performs the following operations:
         - Converts all model and clerical label columns to string type for consistency.
         - Replaces predefined missing value formats (e.g., "NA", "-9") with `np.nan`.
-        - Applies `_safe_zfill` to each label column to standardize formatting (e.g., padding numeric codes).
+        - Applies `_safe_zfill` to each label column to standardize formatting
+        (e.g., padding numeric codes and strings like '123x' to '0123x').
 
         Notes:
             - The columns to be cleaned are determined by combining `model_label_cols` and
@@ -233,17 +234,3 @@ class DataCleaner:
             df[col] = df[col].apply(self._safe_zfill)
 
         return df
-
-
-from typing import Any, ClassVar
-
-import pandas as pd
-
-from survey_assist_utils.configs.column_config import (
-    ColumnConfig,
-)
-
-_SIC_CODE_PADDING = 5
-
-
-# Its only responsibility is to take a raw DataFrame and return a clean one.
