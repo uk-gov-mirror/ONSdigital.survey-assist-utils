@@ -53,22 +53,6 @@ def load_config(config_path):
     return configuration
 
 
-# Load configuration from .toml file
-main_config = load_config("config.toml")
-log_config = main_config.get("logging", {})
-
-# Extract values with defaults
-log_level = getattr(logging, log_config.get("level", "INFO").upper(), logging.INFO)
-log_format = log_config.get("format", "%(asctime)s - %(levelname)s - %(message)s")
-log_file = log_config.get("file")
-print("log_file", log_file)
-
-# Set up logging
-logger = logging.getLogger()
-logger.setLevel(log_level)
-formatter = logging.Formatter(log_format)
-
-
 def _extract_sic_division(
     sic_occ1_series: pd.Series,
     not_codeable_flag: pd.Series,
@@ -85,7 +69,6 @@ def _extract_sic_division(
         pd.Series: A Series containing the first two digits as strings, or an
                    empty string if not applicable or for special codes.
     """
-    logger.debug("Extracting SIC division (first two digits) from sic_ind_occ1.")
     # Default to empty string
     sic_division = pd.Series("", index=sic_occ1_series.index, dtype=str)
 
@@ -106,7 +89,6 @@ def _extract_sic_division(
         eligible_for_extraction
     ].str[:2]
 
-    logger.debug("Finished extracting SIC division.")
     return sic_division
 
 
