@@ -21,12 +21,27 @@ Arguments:
 
 import argparse
 from collections.abc import Hashable
+from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from survey_assist_utils.configs.column_config import ColumnConfig
 from survey_assist_utils.processing.flag_generator import FlagGenerator
 from survey_assist_utils.processing.json_processor import JsonProcessor
+
+# from collections.abc import Hashable
+
+PandasDtype = Union[
+    pd.api.extensions.ExtensionDtype,
+    str,
+    np.dtype,
+    type[str],
+    type[complex],
+    type[bool],
+    type[object],
+]
+
 
 TEST_MODE = True
 
@@ -101,7 +116,10 @@ def main(json_file_path: str, raw_data_path: str, output_path: str):
         string_type_columns = config.model_label_cols + config.clerical_label_cols
 
         # use dictionary comprehension to make dict of dtypes
-        dict_dtypes: dict[Hashable, str] = dict.fromkeys(string_type_columns, "string")
+        dict_dtypes: dict[Hashable, PandasDtype] = dict.fromkeys(
+            string_type_columns, "string"
+        )
+
         # use dict on dtypes
         tmp = pd.read_csv(output_path, dtype=dict_dtypes)
         print(" Confirming the read back of the procesed and merged data")
