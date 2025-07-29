@@ -1,5 +1,13 @@
-"""This module defines the FlagGenerator class, which is responsible for adding
-data quality and codability flags to a raw evaluation DataFrame.
+"""This module defines the `FlagGenerator` class, which enriches a raw evaluation
+DataFrame with data quality and codability flags for downstream analysis.
+
+The flags include:
+- `num_answers`: Counts the number of valid SIC labels provided.
+- `Match_5_digits`, `Match_3_digits`, `Match_2_digits`: Indicators of format conformity.
+- `Unambiguous`: A boolean flag denoting whether a record has a single, well-formed SIC label.
+
+These enhancements support filtering, validation, and interpretation of human-coded
+classification data in the Survey Assist pipeline.
 """
 
 import re
