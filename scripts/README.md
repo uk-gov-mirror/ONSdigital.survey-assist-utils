@@ -82,7 +82,6 @@ The pipeline consists of three main components:
    - Applies `FlagGenerator` to add quality flags
    - Uses `JsonProcessor` to flatten the model's JSON output
    - Merges the two datasets on `unique_id`
-   - Computes evaluation metrics using `MetricCalculator`
    - Saves the final processed DataFrame to a CSV file
 
 ## Example Usage
