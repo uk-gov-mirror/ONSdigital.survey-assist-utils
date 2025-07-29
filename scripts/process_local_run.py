@@ -20,6 +20,8 @@ Arguments:
 """
 
 import argparse
+from collections.abc import Hashable
+
 import pandas as pd
 
 from survey_assist_utils.configs.column_config import ColumnConfig
@@ -27,6 +29,7 @@ from survey_assist_utils.processing.flag_generator import FlagGenerator
 from survey_assist_utils.processing.json_processor import JsonProcessor
 
 TEST_MODE = True
+
 
 def main(json_file_path: str, raw_data_path: str, output_path: str):
     """Main function to orchestrate the data processing pipeline.
@@ -36,10 +39,18 @@ def main(json_file_path: str, raw_data_path: str, output_path: str):
         raw_data_path (str): Path to the raw ground truth CSV file.
         output_path (str): Path to save the final merged and processed CSV file.
     """
-    test_cols = ['unique_id', 'sic_section', 'sic2007_employee', 'sic2007_self_employed',
-       'sic_ind_occ1', 'sic_ind_occ2', 'sic_ind_occ3', 'candidate_1_sic_code',
-       'candidate_1_likelihood']
-    
+    test_cols = [
+        "unique_id",
+        "sic_section",
+        "sic2007_employee",
+        "sic2007_self_employed",
+        "sic_ind_occ1",
+        "sic_ind_occ2",
+        "sic_ind_occ3",
+        "candidate_1_sic_code",
+        "candidate_1_likelihood",
+    ]
+
     print(f"Starting processing for: {json_file_path}")
 
     # --- Step 1: Load the raw ground truth data ---
@@ -85,17 +96,16 @@ def main(json_file_path: str, raw_data_path: str, output_path: str):
     merged_df.to_csv(output_path, index=False)
     print(f"Processing complete. Final data saved to: {output_path}")
 
-
     if TEST_MODE:
         # Confirm that we can read back the data maintaining the leading zeros:
         string_type_columns = config.model_label_cols + config.clerical_label_cols
 
         # use dictionary comprehension to make dict of dtypes
-        dict_dtypes = {x : 'str' for x in string_type_columns}
+        dict_dtypes: dict[Hashable, str] = dict.fromkeys(string_type_columns, "string")
         # use dict on dtypes
         tmp = pd.read_csv(output_path, dtype=dict_dtypes)
-        print(' Confirming the read back of the procesed and merged data')
-        print(tmp.loc[tmp['unique_id'] == 'KB056090'][test_cols])
+        print(" Confirming the read back of the procesed and merged data")
+        print(tmp.loc[tmp["unique_id"] == "KB056090"][test_cols])
 
 
 if __name__ == "__main__":
