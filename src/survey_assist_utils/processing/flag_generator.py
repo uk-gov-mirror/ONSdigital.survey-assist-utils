@@ -12,6 +12,7 @@ _X_COUNT_FOR_MATCH_3 = 2
 _X_COUNT_FOR_MATCH_2 = 3
 
 
+# pylint: disable=too-few-public-methods
 class FlagGenerator:
     """Adds data quality and codability flag columns to a DataFrame.
 
