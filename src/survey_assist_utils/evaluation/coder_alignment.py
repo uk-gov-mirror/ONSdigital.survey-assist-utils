@@ -312,8 +312,9 @@ class LabelAccuracy:
             df (pd.DataFrame): The raw input DataFrame.
             column_config (ColumnConfig): The configuration for the analysis.
         """
-        cleaner = DataCleaner(df, column_config)
-        clean_df = cleaner.process()
+        cleaner = DataCleaner(column_config)
+        clean_df = cleaner.process(df)
+
         self.calculator = MetricCalculator(clean_df, column_config)
         self.df = self.calculator.df
         self.visualizer = Visualizer(self.df, self.calculator)
