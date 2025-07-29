@@ -3,7 +3,7 @@ and flagged ground truth data.
 
 Example Invocation:
 
-python scripts/process_local_run.py "data/json_runs/20250620_153641_output.json" \
+python scripts/process_local_run.py data/json_runs/20250620_153641_output.json \
   --raw_data data/cleaned_data/cleaned_DSC_Rep_Sample.csv \
   --output data/final_processed_output.csv
 
