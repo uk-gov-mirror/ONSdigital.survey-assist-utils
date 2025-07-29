@@ -1,13 +1,23 @@
-"""Runner script to process a local JSON output file and merge it with cleaned
-and flagged ground truth data.
+"""Script to process a local JSON output file from a model run and merge it with
+cleaned and flagged ground truth data for evaluation and analysis.
 
-Example Invocation:
+This script performs the following steps:
+1. Loads cleaned ground truth data from a CSV file.
+2. Adds data quality flags to the ground truth.
+3. Flattens and processes the model's JSON output.
+4. Merges the model output with the ground truth data on a unique identifier.
+5. Computes evaluation metrics and adds derived columns.
+6. Saves the final processed DataFrame to a CSV file.
 
-python scripts/process_local_run.py data/json_runs/20250620_153641_output.json \
-  --raw_data data/cleaned_data/cleaned_DSC_Rep_Sample.csv \
-  --output data/final_processed_output.csv
+Example usage:
+    python scripts/process_local_run.py data/json_runs/20250620_153641_output.json \
+        --raw_data data/cleaned_data/cleaned_DSC_Rep_Sample.csv \
+        --output data/final_processed_output.csv
 
-
+Arguments:
+    json_file: Path to the model's JSON output file.
+    --raw_data: Path to the cleaned ground truth CSV file (default provided).
+    --output: Path to save the final processed CSV file (default provided).
 """
 
 import argparse
