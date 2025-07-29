@@ -7,6 +7,7 @@ import json
 import pandas as pd
 
 
+# pylint: disable=too-few-public-methods
 class JsonProcessor:
     """Handles the processing of a raw LLM JSON file into a clean DataFrame."""
 
