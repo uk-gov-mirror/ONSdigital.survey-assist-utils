@@ -12,11 +12,12 @@ The utilities allow for the following:
 
 import logging
 import os
-import re
-from typing import Any, Optional
 
 import pandas as pd
 import toml
+
+# REFACTOR: Import the new, centralised FlagGenerator class.
+from survey_assist_utils.processing.flag_generator import FlagGenerator
 
 # --- Default Configuration Values (if not found in config) ---
 DEFAULT_OUTPUT_DIR = "analysis_outputs"
@@ -68,75 +69,6 @@ logger.setLevel(log_level)
 formatter = logging.Formatter(log_format)
 
 
-def _calculate_num_answers(
-    df: pd.DataFrame, col_occ1: str, col_occ2: str, col_occ3: str
-) -> pd.Series:
-    """Calculates the number of provided answers in SIC occurrence columns.
-
-    An answer is considered provided if it's not NaN, not an empty string,
-    and not "NA" (case-insensitive).
-
-    Args:
-        df (pd.DataFrame): The input DataFrame.
-        col_occ1 (str): Name of the primary SIC code column.
-        col_occ2 (str): Name of the secondary SIC code column.
-        col_occ3 (str): Name of the tertiary SIC code column.
-
-    Returns:
-        pd.Series: A pandas Series of integers representing the count of answers (0 to 3).
-    """
-    num_answers = pd.Series(0, index=df.index, dtype="int")
-    for col_name in [col_occ1, col_occ2, col_occ3]:
-        if col_name in df.columns:
-            # An entry is considered valid if it's not NaN, not empty string, and not 'NA'
-            is_valid_entry = (
-                ~df[col_name].isna()
-                & (df[col_name].astype(str).str.strip() != "")
-                & (df[col_name].astype(str).str.upper() != "NA")
-            )
-            num_answers += is_valid_entry.astype(int)
-        else:
-            logger.warning(
-                "Column '%s' not found for num_answers calculation. It will be ignored.",
-                col_name,
-            )
-
-    return num_answers
-
-
-# --- Helper Function for SIC Code Matching ---
-def _create_sic_match_flags(sic_series: pd.Series) -> dict[str, pd.Series]:
-    """Calculates various SIC code format match flags for a given Series.
-
-    Args:
-        sic_series (pd.Series): A pandas Series containing SIC codes as strings.
-                                Missing values should be pre-filled (e.g., with '').
-
-    Returns:
-        Dict[str, pd.Series]: A dictionary where keys are flag names
-                              (e.g., "Match_5_digits") and values are
-                              boolean pandas Series.
-    """
-    flags = {}
-
-    # Match 5 digits: ^[0-9]{5}$
-    flags["Match_5_digits"] = sic_series.str.match(r"^[0-9]{5}$", na=False)
-
-    # For partial matches (N digits + X 'x's)
-    is_len_expected = sic_series.str.len() == EXPECTED_SIC_LENGTH
-    x_count = sic_series.str.count("x", re.I)  # Count 'x' case-insensitively
-    only_digits_or_x = sic_series.str.match(r"^[0-9xX]*$", na=False)
-    non_x_part = sic_series.str.replace("x", "", case=False)
-    # Ensure non_x_part is not empty before checking if it's all digits
-    are_non_x_digits = (non_x_part != "") & non_x_part.str.match(r"^[0-9]*$", na=False)
-
-    base_partial_check = is_len_expected & only_digits_or_x & are_non_x_digits
-    flags["Match_3_digits"] = base_partial_check & (x_count == X_COUNT_FOR_MATCH_3)
-    flags["Match_2_digits"] = base_partial_check & (x_count == X_COUNT_FOR_MATCH_2)
-
-    return flags
-
-
 def _extract_sic_division(
     sic_occ1_series: pd.Series,
     not_codeable_flag: pd.Series,
@@ -178,182 +110,46 @@ def _extract_sic_division(
     return sic_division
 
 
-# --- Data Quality Flagging ---
-def add_data_quality_flags(
-    df: pd.DataFrame, loaded_config: Optional[dict[str, Any]] = None
-) -> pd.DataFrame:
-    """Adds data quality flag columns to the DataFrame based on SIC/SOC codes.
-
-    Args:
-        df (pd.DataFrame): The input DataFrame
-        loaded_config (Optional[dict]): Loaded configuration dictionary to get column names.
-
-    Returns:
-        pd.DataFrame: The DataFrame with added boolean quality flag columns.
-                      Returns original DataFrame if essential columns are missing.
-    """
-    logger.info("Adding data quality flag columns...")
-    df_out = df.copy()  # Work on a copy
-
-    # Get column names from config or use defaults
-    col_occ1 = (
-        loaded_config.get("column_names", {}).get("sic_ind_occ1", "sic_ind_occ1")
-        if loaded_config
-        else "sic_ind_occ1"
-    )
-    col_occ2 = (
-        loaded_config.get("column_names", {}).get("sic_ind_occ2", "sic_ind_occ2")
-        if loaded_config
-        else "sic_ind_occ2"
-    )
-    col_occ3 = (
-        loaded_config.get("column_names", {}).get("sic_ind_occ3", "sic_ind_occ3")
-        if loaded_config
-        else "sic_ind_occ3"
+def main():
+    """Main function to run the data preparation pipeline."""
+    # --- 1. Load Configuration and Set Up Logging ---
+    config = load_config("config.toml")
+    log_config = config.get("logging", {})
+    log_level = log_config.get("level", "INFO").upper()
+    logging.basicConfig(
+        level=log_level, format="%(asctime)s - %(levelname)s - %(message)s"
     )
 
-    # Check if essential columns exist
-    required_input_cols = [col_occ1, col_occ2, col_occ3]
+    # --- 2. Get File Paths from Config ---
+    try:
+        analysis_filepath = config["paths"]["batch_filepath"]
+        analysis_csv = config["paths"]["analysis_csv"]
+    except KeyError as e:
+        logging.error("Missing required path in config.toml: %s", e)
+        return
 
-    if not all(col_name in df_out.columns for col_name in required_input_cols):
-        missing_cols = set(required_input_cols) - set(df_out.columns)
-        logger.error(
-            "Input DataFrame missing columns for quality flags: %s. Skipping flag generation.",
-            missing_cols,
-        )
-        return df  # Return original df
+    # --- 3. Load Raw Data ---
+    try:
+        sic_dataframe = pd.read_csv(analysis_filepath, delimiter=",", dtype=str)
+        logging.info("Successfully loaded raw data from: %s", analysis_filepath)
+    except FileNotFoundError:
+        logging.error("Raw data file not found at: %s", analysis_filepath)
+        return
 
-    # --- 1. Special SIC Code Flags for col_occ1 ---
-    df_out["Not_Codeable"] = df_out[col_occ1] == SPECIAL_SIC_NOT_CODEABLE  # -9
-    df_out["Four_Or_More"] = df_out[col_occ1] == SPECIAL_SIC_MULTIPLE_POSSIBLE  # 4+
+    # --- 4. Use FlagGenerator to Add Quality Flags ---
+    # REFACTOR: Instantiate the new FlagGenerator class and call its process method.
+    # This replaces the old, local add_data_quality_flags function.
+    flag_generator = FlagGenerator()
+    sic_dataframe_with_flags = flag_generator.add_flags(sic_dataframe)
 
     # Add SIC division (2 digits)
-    df_out["SIC_Division"] = _extract_sic_division(
-        df_out[col_occ1], df_out["Not_Codeable"], df_out["Four_Or_More"]
-    )
 
-    # --- 2. Number of Answers ---
-    df_out["num_answers"] = _calculate_num_answers(df_out, col_occ1, col_occ2, col_occ3)
-
-    # handle the edge cases of -9:
-    df_out.loc[df_out[col_occ1] == SPECIAL_SIC_NOT_CODEABLE, "num_answers"] = 0
-    # and of 4+
-    df_out.loc[df_out[col_occ1] == SPECIAL_SIC_MULTIPLE_POSSIBLE, "num_answers"] = 4
-
-    # --- 3. Digit/Character Match Flags for col_occ1 ---
-    s_occ1 = df_out[col_occ1].fillna("").astype(str)
-    match_flags_dict = _create_sic_match_flags(s_occ1)
-
-    # --- 4.  col_occ1 ---
-    # Create a new column 'All_Clerical_codes' with a list of values from columns
-    df_out["All_Clerical_codes"] = df_out.apply(
-        lambda row: [row[col_occ1], row[col_occ2], row[col_occ3]], axis=1
-    )
-
-    for flag_name, flag_series in match_flags_dict.items():
-        df_out[flag_name] = flag_series
-
-    # --- 5. Unambiguous Flag ---
-    # Ensure "Match_5_digits" was created by the helper
-    if "Match_5_digits" in df_out.columns:
-        df_out["Unambiguous"] = (df_out["num_answers"] == 1) & (
-            df_out["Match_5_digits"]
-        )
-    else:
-        # Handle case where Match_5_digits might not be created if s_occ1 was problematic
-        # Though _create_sic_match_flags should always return it.
-        df_out["Unambiguous"] = False
-        logger.warning(
-            "'Match_5_digits' column not found for 'Unambiguous' flag calculation."
-        )
-
-    # --- 6. Convert to Pandas Nullable Boolean Type ---
-    flag_cols_list = [
-        "Match_5_digits",
-        "Match_3_digits",
-        "Match_2_digits",
-        "Unambiguous",
-    ]
-
-    for flag_col_name in flag_cols_list:
-        if flag_col_name in df_out.columns:
-            try:
-                df_out[flag_col_name] = df_out[flag_col_name].astype("boolean")
-            except (TypeError, ValueError) as e:  # Catch specific errors
-                logger.warning(
-                    "Could not convert column '%s' to boolean dtype: %s",
-                    flag_col_name,
-                    e,
-                )
-
-    logger.info("Finished adding data quality flag columns.")
-    logger.debug("Flag columns added: %s", flag_cols_list)
-
-    if logger.isEnabledFor(logging.DEBUG):
-        print(f"--- DataFrame info after adding flags (for {len(df_out)} rows) ---")
-        df_out.info()
-        print("----------------------------------------------------------")
-
-    return df_out
-
-
-if __name__ == "__main__":
-
-    if log_file:
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-    # Where the input data csv is. We'll use the batch filepath from batch script
-    analysis_filepath = main_config["paths"]["batch_filepath"]
-
-    # We'll write the post analysis csv here:
-    analysis_csv = main_config["paths"]["analysis_csv"]
-
-    # Check the location exists:
-    # Extract the directory from the file path
+    # --- 5. Save the Enriched DataFrame ---
     output_dir = os.path.dirname(analysis_csv)
-
-    # Check if it exists
-    try:
-        if os.path.exists(output_dir):
-            logging.info("Directory exists: %s ", output_dir)
-        else:
-            logging.warning("Directory does not exist: %s ", output_dir)
-            raise FileNotFoundError(
-                f"Required output directory not found: {output_dir}"
-            )
-    except KeyError as e:
-        logging.error("Missing configuration key: %s", e)
-
-    # Load the data
-    sic_dataframe = pd.read_csv(analysis_filepath, delimiter=",", dtype=str)
-
-    # add quality flags
-    sic_dataframe_with_flags = add_data_quality_flags(sic_dataframe, main_config)
-
-    print("\nDataFrame Head with Quality Flags:")
-    print(sic_dataframe_with_flags.head())
-
-    # Explanation of logic:
-    print("Match_5_digits - a value in sic_ind_occ1 has 5 numeric digits")
-    print("Match_3_digits - a value in sic_ind_occ1 has 3 numeric digits and 2 of x")
-    print("Match_2_digits - a value in sic_ind_occ1 has 2 numeric digits and 3 of x")
-    print("Unambiguous: True if - value in num_answers is one, Match_5_digits is True")
-
-    print("\nValue Counts for Quality Flags:")
-    flag_cols_to_show = [
-        "Match_5_digits",
-        "Match_3_digits",
-        "Match_2_digits",
-        "Unambiguous",
-    ]
-
-    for col_to_show in flag_cols_to_show:
-        if col_to_show in sic_dataframe_with_flags.columns:
-            print(f"\n--- {col_to_show} ---")
-            print(sic_dataframe_with_flags[col_to_show].value_counts(dropna=False))
-
-    # write new dataframe out:
+    os.makedirs(output_dir, exist_ok=True)
     sic_dataframe_with_flags.to_csv(analysis_csv, index=False)
+    logging.info("Successfully saved data with flags to: %s", analysis_csv)
+
+    print("\n--- Analysis Complete ---")
+    print(f"Processed {len(sic_dataframe)} rows.")
+    print(f"Output saved to {analysis_csv}")
