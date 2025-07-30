@@ -29,6 +29,13 @@ See Also:
     - DataCleaner.process: Main entry point for executing the full cleaning pipeline.
 """
 
+# Note - part way through refactoring,
+# Linting check disabled temporarily until complete
+# pylint: disable=R0801
+
+# This is set to ignore because two linting functions fight with each other.
+# One moves it down, the other objects after it was moved.
+# "Module level import not at top of file"
 # ruff: noqa: E402
 from typing import Any, ClassVar
 

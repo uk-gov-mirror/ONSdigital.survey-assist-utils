@@ -18,6 +18,9 @@ Usage:
     )
 """
 
+# Note - part way through refactoring,
+# Linting check disabled temporarily until complete
+# pylint: disable=R0801
 from dataclasses import dataclass
 
 
