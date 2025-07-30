@@ -54,6 +54,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from survey_assist_utils.configs.column_config import ColumnConfig
+
 
 # PR comment: Addresses the "too many arguments" linting error by grouping
 # plot-related parameters into a dedicated configuration object.
@@ -64,17 +66,6 @@ class PlotConfig:
     figsize: tuple[int, int] = (12, 10)
     save: bool = False
     filename: Optional[str] = None
-
-
-@dataclass
-class ColumnConfig:
-    """A data structure to hold the name configurations for the analysis."""
-
-    model_label_cols: list[str]
-    model_score_cols: list[str]
-    clerical_label_cols: list[str]
-    id_col: str = "id"
-    filter_unambiguous: bool = False
 
 
 @dataclass
