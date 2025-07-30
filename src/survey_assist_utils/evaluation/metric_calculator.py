@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from survey_assist_utils.configs.column_config import ColumnConfig
+from survey_assist_utils.data_cleaning.data_cleaner import DataCleaner
 
 
 class MetricCalculator:
@@ -172,3 +173,68 @@ class MetricCalculator:
             "accuracy_above_0.80": self.get_accuracy(0.8),
             "coverage_above_0.80": self.get_coverage(0.8),
         }
+
+
+class LabelAccuracy:
+    """Orchestrates data cleaning, metric calculation, and visualization."""
+
+    def __init__(self, df: pd.DataFrame, column_config: ColumnConfig):
+        """Initialises the full analysis pipeline.
+
+        Args:
+            df (pd.DataFrame): The raw input DataFrame.
+            column_config (ColumnConfig): The configuration for the analysis.
+        """
+        cleaner = DataCleaner(column_config)
+        clean_df = cleaner.process(df)
+
+        self.calculator = MetricCalculator(clean_df, column_config)
+        self.df = self.calculator.df
+
+    #        self.visualizer = Visualizer(self.df, self.calculator)
+
+    def get_accuracy(self, **kwargs) -> Union[float, dict[str, Any]]:
+        """Delegates call to MetricCalculator.get_accuracy."""
+        return self.calculator.get_accuracy(**kwargs)
+
+    def get_jaccard_similarity(self, **kwargs) -> float:
+        """Delegates call to MetricCalculator.get_jaccard_similarity."""
+        return self.calculator.get_jaccard_similarity(**kwargs)
+
+    def get_coverage(self, **kwargs) -> float:
+        """Delegates call to MetricCalculator.get_coverage."""
+        return self.calculator.get_coverage(**kwargs)
+
+    def get_summary_stats(self, **kwargs) -> dict[str, Any]:
+        """Delegates call to MetricCalculator.get_summary_stats."""
+        return self.calculator.get_summary_stats(**kwargs)
+
+    @staticmethod
+    def save_output(metadata: dict, eval_result: dict, save_path: str = "data/") -> str:
+        """Save evaluation results to files.
+
+        Args:
+            metadata (dict): Dictionary of metadata parameters.
+            eval_result (dict): Dictionary containing evaluation metrics.
+            save_path (str): The folder where results should be saved.
+
+        Returns:
+            str: The folder path where results were stored.
+        """
+        if not metadata:
+            raise ValueError("Metadata dictionary cannot be empty")
+        dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        folder_name = os.path.join(
+            save_path, f"outputs/{dt_str}_{metadata.get('evaluation_type', 'unnamed')}"
+        )
+        os.makedirs(folder_name, exist_ok=True)
+        with open(
+            os.path.join(folder_name, "metadata.json"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(metadata, f, indent=4)
+        with open(
+            os.path.join(folder_name, "evaluation_result.json"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(eval_result, f, indent=4)
+        print(f"Successfully saved all outputs to {folder_name}")
+        return folder_name
