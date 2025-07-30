@@ -94,6 +94,17 @@ The annotation isn't required for the processing, only for the evaluation.
 ## The Evaluation Workflow
 
 The end-to-end process is handled by a series of scripts that form a data pipeline:
+* to do * 
+Refactoring - DataCleaner moved to own module
+
+### DataCleaner
+This can be run using the script 
+example_data_runner.py
+
+The output for this will be the input to the next stage which is work in progress.
+
+
+
 
 1.  **Stage 1: Batch Processing (`process_tlfs_evaluation_data.py`)**
     * **Input:** A CSV file containing survey responses (e.g., job title, industry description).
@@ -108,7 +119,7 @@ The end-to-end process is handled by a series of scripts that form a data pipeli
 3.  **Stage 3: Performance Analysis (`coder_alignment.py`)**
     * **Input:** A merged DataFrame containing both the raw LLM output from Stage 1 and the enriched human-coded data from Stage 2.
     * **Process:** The `LabelAccuracy` class takes this combined data and calculates a suite of metrics to measure the alignment between the LLM's suggestions and the human-provided ground truth.
-    * **Output:** Quantitative metrics and visualizations (e.g., heatmaps, charts) that summarise the model's performance.
+    * **Output:** Quantitative metrics and visualisations (e.g., heatmaps, charts) that summarise the model's performance.
 
 ## Human Coder Alignment
 
@@ -120,7 +131,7 @@ The end-to-end process is handled by a series of scripts that form a data pipeli
 The `coder_alignment` module provides several key metrics to assess performance from different angles:
 
 * **Match Accuracy:** This is the primary KPI, measuring how often a correct code appears anywhere in the model's suggestion list. It provides a top-level view of whether the model is providing useful answers.
-* **SJaccard Similarity:** This metric is to measure the overall relevance of the suggestion list. It helps determine if the model's suggestions are closely align with the human coder's choices
+* **Jaccard Similarity:** This metric is to measure the overall relevance of the suggestion list. It helps determine if the model's suggestions are closely align with the human coder's choices
 * **Candidate Ranking & Contribution:** This analysis assesses the value of each individual suggestion (e.g., the 3rd or 5th candidate). It helps answer business questions about the optimal number of suggestions to display to a user.
 * **Error Pattern Analysis (Confusion Matrix):** This provides a visual heatmap to diagnose systematic errors. It shows if the model consistently confuses two specific codes, and is used for prompt engineering and model improvement.
 * **Confidence vs. Coverage Analysis:** The framework includes tools to plot model confidence scores against accuracy and coverage, showing the trade-off for confidence at various levels.
