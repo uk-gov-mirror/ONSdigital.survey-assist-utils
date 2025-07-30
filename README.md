@@ -116,7 +116,13 @@ The output for this will be the input to the next stage which is work in progres
     * **Process:** This script enriches the original data by adding a series of data quality flags. It analyses the human-coded SICs to determine if a response is complete, ambiguous, or requires special handling.
     * **Output:** An enriched CSV file with additional metadata columns (e.g., `Unambiguous`, `Match_5_digits`).
 
-3.  **Stage 3: Performance Analysis (`coder_alignment.py`)**
+3. **Stage 3: Data Cleaning (`data_cleaner.py`)**
+    * Before analysis, the data file needs to be cleaned weith this module
+
+5.  **Stage 5: JSON merging**
+    This is a work in progress and will be added later    
+
+6.  **Stage 6: Performance Analysis (`coder_alignment.py`)**
     * **Input:** A merged DataFrame containing both the raw LLM output from Stage 1 and the enriched human-coded data from Stage 2.
     * **Process:** The `LabelAccuracy` class takes this combined data and calculates a suite of metrics to measure the alignment between the LLM's suggestions and the human-provided ground truth.
     * **Output:** Quantitative metrics and visualisations (e.g., heatmaps, charts) that summarise the model's performance.
