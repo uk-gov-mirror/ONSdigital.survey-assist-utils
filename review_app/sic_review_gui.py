@@ -69,7 +69,7 @@ class SICReviewGUI:
         file_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         file_frame.columnconfigure(1, weight=1)
         
-        ttk.Button(file_frame, text="Load Excel File", command=self.load_file).grid(row=0, column=0, padx=(0, 10))
+        ttk.Button(file_frame, text="Load CSV File", command=self.load_file).grid(row=0, column=0, padx=(0, 10))
         self.file_label = ttk.Label(file_frame, text="No file loaded")
         self.file_label.grid(row=0, column=1, sticky=(tk.W, tk.E))
     
@@ -227,15 +227,15 @@ class SICReviewGUI:
         ttk.Button(save_frame, text="📋 Export JSON", command=lambda: self.export_data('json')).grid(row=0, column=2)
     
     def load_file(self):
-        """Load Excel file"""
+        """Load CSV file"""
         filename = filedialog.askopenfilename(
-            title="Select Excel file",
-            filetypes=[("Excel files", "*.xlsx *.xls"), ("All files", "*.*")]
+            title="Select CSV file",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
         )
         
         if filename:
             try:
-                self.df = pd.read_excel(filename)
+                self.df = pd.read_csv(filename)
                 self.filename = filename
                 
                 # Add review columns if they don't exist
@@ -343,8 +343,11 @@ class SICReviewGUI:
                 f"{likelihood:.1%}"
             ))
         
-        # Update review fields with existing data
-        self.reviewer_initials.set(row.get('reviewer_initials', ''))
+        # Update review fields with existing data, but preserve initials if already entered
+        current_initials = self.reviewer_initials.get()
+        if not current_initials.strip():
+            # Only update initials if they're empty
+            self.reviewer_initials.set(row.get('reviewer_initials', ''))
         
         # Handle boolean fields properly
         model_plausible = row.get('model_prediction_plausible')
@@ -457,7 +460,19 @@ class SICReviewGUI:
         self.df.loc[self.current_index, 'recommended_sic_code'] = self.recommended_sic.get().strip()
         self.df.loc[self.current_index, 'reviewer_notes'] = self.notes.get().strip()
         
+        # Store initials for future use (keep them for next review)
+        stored_initials = self.reviewer_initials.get().strip()
+        
         messagebox.showinfo("Success", "Review saved successfully!")
+        
+        # Clear form fields except initials
+        self.model_plausible.set("")
+        self.better_available.set("")
+        self.recommended_sic.set("")
+        self.notes.set("")
+        
+        # Keep the initials for next review
+        self.reviewer_initials.set(stored_initials)
         
         # Auto-advance to next unreviewed entry
         for i in range(self.current_index + 1, len(self.df)):
@@ -477,35 +492,71 @@ class SICReviewGUI:
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        if format_type == 'excel':
-            filename = filedialog.asksaveasfilename(
-                defaultextension=".xlsx",
-                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
-                initialname=f"sic_review_results_{timestamp}.xlsx"
-            )
-            if filename:
-                self.df.to_excel(filename, index=False)
-                messagebox.showinfo("Success", f"Data exported to {filename}")
+        try:
+            if format_type == 'excel':
+                filename = filedialog.asksaveasfilename(
+                    defaultextension=".xlsx",
+                    filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+                    title="Save Excel File"
+                )
+                if filename:
+                    # Add timestamp to filename if not already there
+                    if not any(char.isdigit() for char in filename):
+                        base, ext = os.path.splitext(filename)
+                        filename = f"{base}_{timestamp}{ext}"
+                    
+                    try:
+                        self.df.to_excel(filename, index=False)
+                        messagebox.showinfo("Success", f"Data exported to {filename}")
+                    except ImportError:
+                        messagebox.showerror("Error", "openpyxl is required for Excel export. Try CSV instead.")
+                    except PermissionError:
+                        messagebox.showerror("Error", f"Permission denied. Cannot write to {filename}")
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Excel export failed: {str(e)}")
+            
+            elif format_type == 'csv':
+                filename = filedialog.asksaveasfilename(
+                    defaultextension=".csv",
+                    filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                    title="Save CSV File"
+                )
+                if filename:
+                    # Add timestamp to filename if not already there
+                    if not any(char.isdigit() for char in filename):
+                        base, ext = os.path.splitext(filename)
+                        filename = f"{base}_{timestamp}{ext}"
+                    
+                    try:
+                        self.df.to_csv(filename, index=False)
+                        messagebox.showinfo("Success", f"Data exported to {filename}")
+                    except PermissionError:
+                        messagebox.showerror("Error", f"Permission denied. Cannot write to {filename}")
+                    except Exception as e:
+                        messagebox.showerror("Error", f"CSV export failed: {str(e)}")
+            
+            elif format_type == 'json':
+                filename = filedialog.asksaveasfilename(
+                    defaultextension=".json",
+                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                    title="Save JSON File"
+                )
+                if filename:
+                    # Add timestamp to filename if not already there
+                    if not any(char.isdigit() for char in filename):
+                        base, ext = os.path.splitext(filename)
+                        filename = f"{base}_{timestamp}{ext}"
+                    
+                    try:
+                        self.df.to_json(filename, orient='records', indent=2)
+                        messagebox.showinfo("Success", f"Data exported to {filename}")
+                    except PermissionError:
+                        messagebox.showerror("Error", f"Permission denied. Cannot write to {filename}")
+                    except Exception as e:
+                        messagebox.showerror("Error", f"JSON export failed: {str(e)}")
         
-        elif format_type == 'csv':
-            filename = filedialog.asksaveasfilename(
-                defaultextension=".csv",
-                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-                initialname=f"sic_review_results_{timestamp}.csv"
-            )
-            if filename:
-                self.df.to_csv(filename, index=False)
-                messagebox.showinfo("Success", f"Data exported to {filename}")
-        
-        elif format_type == 'json':
-            filename = filedialog.asksaveasfilename(
-                defaultextension=".json",
-                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-                initialname=f"sic_review_results_{timestamp}.json"
-            )
-            if filename:
-                self.df.to_json(filename, orient='records', indent=2)
-                messagebox.showinfo("Success", f"Data exported to {filename}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Export failed: {str(e)}")
 
 
 def main():
