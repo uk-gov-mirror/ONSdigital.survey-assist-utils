@@ -1,7 +1,10 @@
 import marimo
 
 __generated_with = "0.14.16"
-app = marimo.App(width="medium")
+app = marimo.App(
+    width="medium",
+    layout_file="layouts/sic_review_marimo.grid.json",
+)
 
 
 @app.cell
@@ -12,7 +15,9 @@ def _():
     import ast
     import os
     from datetime import datetime
-    return ast, datetime, json, mo, os, pd
+    from collections import namedtuple
+    import re
+    return datetime, mo, namedtuple, os, pd, re
 
 
 @app.cell
@@ -22,45 +27,39 @@ def _(mo):
 
 
 @app.cell
-def _(ast, json, pd):
+def _(namedtuple, pd, re):
     def parse_sic_candidates(candidates_str):
-            """Parse SIC candidates from string format"""
-            if pd.isna(candidates_str) or candidates_str == "":
-                return []
+        """Parse SIC candidates from RagCandidate string format"""
+        if pd.isna(candidates_str) or candidates_str == "" or str(candidates_str).lower() == "nan":
+            return []
 
-            try:
-                # Try parsing as JSON first
-                if isinstance(candidates_str, str):
-                    candidates_str = candidates_str.replace("'", '"')
-                    data = json.loads(candidates_str)
-                else:
-                    data = candidates_str
+        # Create named tuple type
+        RagCandidate = namedtuple('RagCandidate', ['class_code', 'class_descriptive', 'likelihood'])
 
-                if isinstance(data, dict) and 'alt_candidates' in data:
-                    return data['alt_candidates']
-                elif isinstance(data, list):
-                    return data
-                else:
-                    return []
-            except:
-                try:
-                    # Try evaluating as Python literal
-                    data = ast.literal_eval(str(candidates_str))
-                    if isinstance(data, dict) and 'alt_candidates' in data:
-                        return data['alt_candidates']
-                    elif isinstance(data, list):
-                        return data
-                    else:
-                        return []
-                except:
-                    return []
+        try:
+            # Extract all RagCandidate entries using regex
+            pattern = r"RagCandidate\(class_code='([^']+)', class_descriptive='([^']+)', likelihood=([0-9.]+)\)"
+            matches = re.findall(pattern, str(candidates_str))
+
+            candidates = []
+            for match in matches:
+                candidate = RagCandidate(
+                    class_code=match[0],
+                    class_descriptive=match[1], 
+                    likelihood=float(match[2])
+                )
+                candidates.append(candidate)
+
+            return candidates
+        except Exception as e:
+            return []
     return (parse_sic_candidates,)
 
 
 @app.cell
 def _(mo):
     # File path - EDIT THIS TO YOUR ACTUAL FILE PATH
-    CSV_FILE_PATH = "D:/survey-assist-utils/data/review_tool_test.csv"
+    CSV_FILE_PATH = "D:/survey-assist-utils/data/intermediate_results_for_review.csv"
 
     mo.md(f"""
     ## File Configuration
@@ -157,17 +156,12 @@ def _(data_df, entry_slider, mo, parse_sic_candidates, pd):
         try:
             candidates_raw = current_row.get('sic_candidates', '')
             candidates_list = parse_sic_candidates(candidates_raw)
-
             # Format candidates for display
             if candidates_list:
                 candidates_display = ""
                 for i, candidate in enumerate(candidates_list, 1):
-                    code = candidate.get('class_code', 'N/A')
-                    description = candidate.get('class_descriptive', 'N/A')
-                    likelihood = candidate.get('likelihood', 0)
-
-                    candidates_display += f"**{i}.** - **{code}** - {description}\n"
-                    candidates_display += f"   *Likelihood: {likelihood:.1%}*\n\n"
+                    candidates_display += f"**{candidate.class_code}** - {candidate.class_descriptive}\n"
+                    candidates_display += f"   *Likelihood: {candidate.likelihood:.1%}*\n\n"
         except Exception as e:
             candidates_display = f"Error parsing candidates: {str(e)}"
 
@@ -177,35 +171,42 @@ def _(data_df, entry_slider, mo, parse_sic_candidates, pd):
         header_section = mo.md(f"""## Entry {current_idx + 1} of {len(data_df)} - {status_text}
         """)
 
-        original_response_section = mo.md(f"""### Original Data and Model Prediction:
+        original_response_section = mo.md(f"""### Original Data
 
         **Job Title:** {job_title}  
         **Industry:** {industry}  
         **Job Description:**
         {job_desc[:500]}{"..." if len(job_desc) > 500 else ""}
-
-        **Model SIC Code:** `{model_sic}`
+        ----------
         """)
 
-        follow_up_section = mo.md(f"""### Follow-up information:
+        follow_up_section = mo.md(f"""### Follow-up information
 
         **Question:** {followup_q}  
         **Answer:** {followup_a}
+        ----------
         """)
 
         candidate_section = mo.md(f"""### SIC Candidates
 
         {candidates_display}
+        ----------
         """)
 
-        review_section = mo.md(f"""### Existing Review:
+        model_prediction = mo.md(f"""### Model Prediction
 
-        **Reviewer:** {current_row.get('reviewer_initials', 'None')}  
-        **Model Plausible:** {current_row.get('model_prediction_plausible', 'Not answered')}  
-        **Better Available:** {current_row.get('better_sic_available', 'Not answered')}  
-        **Recommended SIC:** {current_row.get('recommended_sic_code', 'None')}  
-        **Notes:** {current_row.get('reviewer_notes', 'None')}
+        **Model SIC Code:** `{model_sic}`
         """)
+
+
+        # review_section = mo.md(f"""### Existing Review:
+
+        # **Reviewer:** {current_row.get('reviewer_initials', 'None')}  
+        # **Model Plausible:** {current_row.get('model_prediction_plausible', 'Not answered')}  
+        # **Better Available:** {current_row.get('better_sic_available', 'Not answered')}  
+        # **Recommended SIC:** {current_row.get('recommended_sic_code', 'None')}  
+        # **Notes:** {current_row.get('reviewer_notes', 'None')}
+        # """)
 
         _entry_response = mo.vstack(
             [
@@ -213,7 +214,8 @@ def _(data_df, entry_slider, mo, parse_sic_candidates, pd):
                 original_response_section,
                 follow_up_section,
                 candidate_section,
-                review_section
+                model_prediction,
+                # review_section
             ]
 
         )
