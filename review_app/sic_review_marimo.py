@@ -59,7 +59,7 @@ def _(namedtuple, pd, re):
 @app.cell
 def _(mo):
     # File path - EDIT THIS TO YOUR ACTUAL FILE PATH
-    CSV_FILE_PATH = "D:/survey-assist-utils/data/intermediate_results_for_review.csv"
+    CSV_FILE_PATH = "D:/survey-assist-utils/data/intermediate_results.csv"
 
     mo.md(f"""
     ## File Configuration
@@ -148,13 +148,13 @@ def _(data_df, entry_slider, mo, parse_sic_candidates, pd):
         industry = current_row.get('sic2007_employee', 'N/A')
         model_sic = current_row.get('final_sic', 'N/A')
         job_desc = str(current_row.get('soc2020_job_description', 'N/A'))
-        followup_q = current_row.get('follow-up_q', 'N/A')
-        followup_a = current_row.get('answer_to_followup', 'N/A')
+        followup_q = current_row.get('follow_up_q', 'N/A')
+        followup_a = current_row.get('answer_to_follow_up', 'N/A')
 
         # Parse SIC candidates
         candidates_display = "No candidates available"
         try:
-            candidates_raw = current_row.get('sic_candidates', '')
+            candidates_raw = current_row.get('alt_candidates', '')
             candidates_list = parse_sic_candidates(candidates_raw)
             # Format candidates for display
             if candidates_list:
