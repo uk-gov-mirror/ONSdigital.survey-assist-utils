@@ -17,7 +17,7 @@ def _():
     from datetime import datetime
     from collections import namedtuple
     import re
-    return datetime, mo, namedtuple, os, pd, re
+    return datetime, mo, os, pd, re
 
 
 @app.cell
@@ -27,39 +27,26 @@ def _(mo):
 
 
 @app.cell
-def _(namedtuple, pd, re):
+def _(pd, re):
     def parse_sic_candidates(candidates_str):
-        """Parse SIC candidates from RagCandidate string format"""
         if pd.isna(candidates_str) or candidates_str == "" or str(candidates_str).lower() == "nan":
             return []
 
-        # Create named tuple type
-        RagCandidate = namedtuple('RagCandidate', ['class_code', 'class_descriptive', 'likelihood'])
-
         try:
             # Extract all RagCandidate entries using regex
-            pattern = r"RagCandidate\(class_code='([^']+)', class_descriptive='([^']+)', likelihood=([0-9.]+)\)"
+            pattern = r"([0-9]+x*X*)"
             matches = re.findall(pattern, str(candidates_str))
 
-            candidates = []
-            for match in matches:
-                candidate = RagCandidate(
-                    class_code=match[0],
-                    class_descriptive=match[1], 
-                    likelihood=float(match[2])
-                )
-                candidates.append(candidate)
-
-            return candidates
+            return matches
         except Exception as e:
-            return []
+            raise
     return (parse_sic_candidates,)
 
 
 @app.cell
 def _(mo):
     # File path - EDIT THIS TO YOUR ACTUAL FILE PATH
-    CSV_FILE_PATH = "D:/survey-assist-utils/data/intermediate_results.csv"
+    CSV_FILE_PATH = "D:/survey-assist-utils/data/intermediate_results_rand100.csv"
 
     mo.md(f"""
     ## File Configuration
@@ -72,25 +59,25 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(CSV_FILE_PATH, mo, os, pd):
-    data_df = None
+    initial_data_df = None
     _load_response = None
     try:
         if os.path.exists(CSV_FILE_PATH):
-            data_df = pd.read_csv(CSV_FILE_PATH)
+            initial_data_df = pd.read_csv(CSV_FILE_PATH)
 
             # Add review columns if missing
             review_columns = ['reviewer_initials', 'review_timestamp', 'model_prediction_plausible', 
-                             'better_sic_available', 'recommended_sic_code', 'reviewer_notes']
+                             'reviewer_notes']
 
             for col in review_columns:
-                if col not in data_df.columns:
-                    if col in ['model_prediction_plausible', 'better_sic_available']:
-                        data_df[col] = None
+                if col not in initial_data_df.columns:
+                    if col in ['model_prediction_plausible']:
+                        initial_data_df[col] = None
                     else:
-                        data_df[col] = ""
+                        initial_data_df[col] = ""
 
-            entry_count = len(data_df)
-            review_count = sum(data_df['reviewer_initials'].notna() & (data_df['reviewer_initials'] != ""))
+            entry_count = len(initial_data_df)
+            review_count = sum(initial_data_df['reviewer_initials'].notna() & (initial_data_df['reviewer_initials'] != ""))
 
             _load_response = mo.md(f"""
             ## Data Loaded Successfully!
@@ -104,6 +91,13 @@ def _(CSV_FILE_PATH, mo, os, pd):
     except Exception as e:
         _load_response = mo.md(f"**Error loading file:** {str(e)}")
     _load_response
+    return (initial_data_df,)
+
+
+@app.cell
+def _(initial_data_df):
+    # Filter out entries where CC provided a single 5-digit SIC code
+    data_df = initial_data_df[initial_data_df["Unambiguous"] == False]
     return (data_df,)
 
 
@@ -148,20 +142,21 @@ def _(data_df, entry_slider, mo, parse_sic_candidates, pd):
         industry = current_row.get('sic2007_employee', 'N/A')
         model_sic = current_row.get('final_sic', 'N/A')
         job_desc = str(current_row.get('soc2020_job_description', 'N/A'))
-        followup_q = current_row.get('follow_up_q', 'N/A')
-        followup_a = current_row.get('answer_to_follow_up', 'N/A')
+        followup_q = current_row.get('followup_question', 'N/A')
+        followup_a = current_row.get('followup_answer', 'N/A')
 
         # Parse SIC candidates
         candidates_display = "No candidates available"
         try:
-            candidates_raw = current_row.get('alt_candidates', '')
+            candidates_raw = current_row.get('alt_sic_candidates', '')
             candidates_list = parse_sic_candidates(candidates_raw)
             # Format candidates for display
             if candidates_list:
                 candidates_display = ""
                 for i, candidate in enumerate(candidates_list, 1):
-                    candidates_display += f"**{candidate.class_code}** - {candidate.class_descriptive}\n"
-                    candidates_display += f"   *Likelihood: {candidate.likelihood:.1%}*\n\n"
+                    candidates_display += f"**Candidate {i}:** `{candidate}`\n\n"
+                    # candidates_display += f"**{candidate.class_code}** - {candidate.class_descriptive}\n"
+                    # candidates_display += f"   *Likelihood: {candidate.likelihood:.1%}*\n\n"
         except Exception as e:
             candidates_display = f"Error parsing candidates: {str(e)}"
 
@@ -237,10 +232,6 @@ def _(mo):
 
         {model_plausible}
 
-        {better_available}
-
-        {recommended_sic}
-
         {review_notes}
     ''')
         .batch(
@@ -250,15 +241,15 @@ def _(mo):
                             label="Is the model prediction plausible?",
 
             ),
-            better_available = mo.ui.radio(
-                            options=["Yes", "No"],
-                            label="Is a better SIC code available?"
-                        ),
+            # better_available = mo.ui.radio(
+            #                 options=["Yes", "No"],
+            #                 label="Is a better SIC code available?"
+            #             ),
 
-            recommended_sic = mo.ui.text(
-                            label="Recommended SIC Code (if applicable):",
-                            placeholder="Enter SIC code if you have a better suggestion"
-                        ),
+            # recommended_sic = mo.ui.text(
+            #                 label="Recommended SIC Code (if applicable):",
+            #                 placeholder="Enter SIC code if you have a better suggestion"
+            #             ),
 
             review_notes = mo.ui.text_area(
                             label="Notes:",
@@ -282,16 +273,16 @@ def _(CSV_FILE_PATH, data_df, datetime, entry_slider, form, mo):
             _warning = mo.md("❌ **Please enter your initials**")
         elif not form.value['model_plausible']:
             _warning = mo.md("❌ **Please answer whether the model prediction is plausible**")
-        elif not form.value['better_available']:
-            _warning = mo.md("❌ **Please answer whether a better SIC code is available**")
+        # elif not form.value['better_available']:
+        #     _warning = mo.md("❌ **Please answer whether a better SIC code is available**")
         else:
             # Save the review
             review_idx = entry_slider.value - 1
             data_df.loc[review_idx, 'reviewer_initials'] = form.value['reviewer_initials'].strip()
             data_df.loc[review_idx, 'review_timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             data_df.loc[review_idx, 'model_prediction_plausible'] = (form.value['model_plausible'] == "Yes")
-            data_df.loc[review_idx, 'better_sic_available'] = (form.value['better_available'] == "Yes")
-            data_df.loc[review_idx, 'recommended_sic_code'] = form.value['recommended_sic'].strip() if form.value['recommended_sic'] else ""
+            # data_df.loc[review_idx, 'better_sic_available'] = (form.value['better_available'] == "Yes")
+            # data_df.loc[review_idx, 'recommended_sic_code'] = form.value['recommended_sic'].strip() if form.value['recommended_sic'] else ""
             data_df.loc[review_idx, 'review_notes'] = form.value['review_notes'].strip() if form.value['review_notes'] else ""
             data_df.to_csv(CSV_FILE_PATH, index=False)
             _warning = mo.md(f"✅ **Review saved successfully for entry {entry_slider.value}!**")
