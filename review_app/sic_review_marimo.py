@@ -15,9 +15,9 @@ def _():
     import ast
     import os
     from datetime import datetime
-    from collections import namedtuple
-    import re
-    return datetime, mo, os, pd, re
+    # from collections import namedtuple
+    # import re
+    return datetime, mo, os, pd
 
 
 @app.cell
@@ -27,26 +27,28 @@ def _(mo):
 
 
 @app.cell
-def _(pd, re):
-    def parse_sic_candidates(candidates_str):
-        if pd.isna(candidates_str) or candidates_str == "" or str(candidates_str).lower() == "nan":
-            return []
+def _():
+    # def parse_sic_candidates(candidates_str):
+    #     if pd.isna(candidates_str) or candidates_str == "" or str(candidates_str).lower() == "nan":
+    #         return []
 
-        try:
-            # Extract all RagCandidate entries using regex
-            pattern = r"([0-9]+x*X*)"
-            matches = re.findall(pattern, str(candidates_str))
+    #     try:
+    #         # Extract all RagCandidate entries using regex
+    #         pattern = r"([0-9]+x*X*)"
+    #         matches = re.findall(pattern, str(candidates_str))
 
-            return matches
-        except Exception as e:
-            raise
-    return (parse_sic_candidates,)
+    #         return matches
+    #     except Exception as e:
+    #         raise
+    return
 
 
 @app.cell
 def _(mo):
     # File path - EDIT THIS TO YOUR ACTUAL FILE PATH
-    CSV_FILE_PATH = "D:/survey-assist-utils/data/intermediate_results_rand100.csv"
+    #CSV_FILE_PATH = "D:/survey-assist-utils/data/intermediate_results_rand100.csv"
+    CSV_FILE_PATH = "./two_prompt_outputs/STG5.parquet"
+
 
     mo.md(f"""
     ## File Configuration
@@ -63,7 +65,7 @@ def _(CSV_FILE_PATH, mo, os, pd):
     _load_response = None
     try:
         if os.path.exists(CSV_FILE_PATH):
-            initial_data_df = pd.read_csv(CSV_FILE_PATH)
+            initial_data_df = pd.read_parquet(CSV_FILE_PATH)
 
             # Add review columns if missing
             review_columns = ['reviewer_initials', 'review_timestamp', 'model_prediction_plausible', 
@@ -130,7 +132,7 @@ def _(data_df, mo):
 
 
 @app.cell
-def _(data_df, entry_slider, mo, parse_sic_candidates, pd):
+def _(data_df, entry_slider, mo, pd):
     # Display current entry
     _entry_response = None
     if data_df is not None and entry_slider is not None:
@@ -141,6 +143,7 @@ def _(data_df, entry_slider, mo, parse_sic_candidates, pd):
         job_title = current_row.get('soc2020_job_title', 'N/A')
         industry = current_row.get('sic2007_employee', 'N/A')
         model_sic = current_row.get('final_sic', 'N/A')
+        model_sic_higher = current_row.get('higher_level_final_sic', 'N/A')
         job_desc = str(current_row.get('soc2020_job_description', 'N/A'))
         followup_q = current_row.get('followup_question', 'N/A')
         followup_a = current_row.get('followup_answer', 'N/A')
@@ -149,12 +152,13 @@ def _(data_df, entry_slider, mo, parse_sic_candidates, pd):
         candidates_display = "No candidates available"
         try:
             candidates_raw = current_row.get('alt_sic_candidates', '')
-            candidates_list = parse_sic_candidates(candidates_raw)
+            #candidates_list = [cr.code for cr in candidates_raw] #parse_sic_candidates(candidates_raw)
+        
             # Format candidates for display
-            if candidates_list:
+            if len(candidates_raw) > 0:
                 candidates_display = ""
-                for i, candidate in enumerate(candidates_list, 1):
-                    candidates_display += f"**Candidate {i}:** `{candidate}`\n\n"
+                for i, candidate in enumerate(candidates_raw, 1):
+                    candidates_display += f"**Candidate {i}:** `{candidate['code']} | {candidate['title']}`\n\n"
                     # candidates_display += f"**{candidate.class_code}** - {candidate.class_descriptive}\n"
                     # candidates_display += f"   *Likelihood: {candidate.likelihood:.1%}*\n\n"
         except Exception as e:
@@ -190,7 +194,7 @@ def _(data_df, entry_slider, mo, parse_sic_candidates, pd):
 
         model_prediction = mo.md(f"""### Model Prediction
 
-        **Model SIC Code:** `{model_sic}`
+        **Model SIC Code:** `{model_sic}{model_sic_higher}`
         """)
 
 
