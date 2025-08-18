@@ -147,13 +147,14 @@ def _(data_df, entry_slider, mo, pd):
         job_desc = str(current_row.get('soc2020_job_description', 'N/A'))
         followup_q = current_row.get('followup_question', 'N/A')
         followup_a = current_row.get('followup_answer', 'N/A')
+        cc_codes = current_row.get('All_Clerical_codes', 'N/A')
 
         # Parse SIC candidates
         candidates_display = "No candidates available"
         try:
             candidates_raw = current_row.get('alt_sic_candidates', '')
             #candidates_list = [cr.code for cr in candidates_raw] #parse_sic_candidates(candidates_raw)
-        
+
             # Format candidates for display
             if len(candidates_raw) > 0:
                 candidates_display = ""
@@ -196,6 +197,10 @@ def _(data_df, entry_slider, mo, pd):
 
         **Model SIC Code:** `{model_sic}{model_sic_higher}`
         """)
+        cc_decision = mo.md(f"""### Clerical Coder Decision
+
+        **Clerical Coders SIC Code:** `{cc_codes}`
+        """)
 
 
         # review_section = mo.md(f"""### Existing Review:
@@ -212,8 +217,9 @@ def _(data_df, entry_slider, mo, pd):
                 header_section,
                 original_response_section,
                 follow_up_section,
-                candidate_section,
                 model_prediction,
+                cc_decision,
+                candidate_section,
                 # review_section
             ]
 
