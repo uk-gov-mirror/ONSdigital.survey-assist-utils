@@ -8,7 +8,6 @@ import pandas as pd
 from survey_assist_utils.evaluation.coder_alignment import ColumnConfig, LabelAccuracy
 
 
-############################### MODIFY the parse_args!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 def parse_args():
     """Parses command line arguments for the script."""
     parser = AP()
@@ -73,13 +72,6 @@ def parse_args():
         help="""test configuration; specify the type one-to-one, one-to-many,
         many-to-one, many-to-many , select `OO`, `OM`, `MO`, or `MM`. Defaults to `MM`""",
     )
-    # parser.add_argument(
-    #     "--restart",
-    #     "-r",
-    #     action="store_true",
-    #     default=False,
-    #     help="try to restart a processing job (optional flag)",
-    # )
     return parser.parse_args()
 
 
