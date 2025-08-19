@@ -47,25 +47,25 @@ def _():
 def _(mo):
     # File path - EDIT THIS TO YOUR ACTUAL FILE PATH
     #CSV_FILE_PATH = "D:/survey-assist-utils/data/intermediate_results_rand100.csv"
-    CSV_FILE_PATH = "./two_prompt_outputs/STG5.parquet"
+    PARQUET_FILE_PATH = "./two_prompt_outputs/STG5.parquet"
 
 
     mo.md(f"""
     ## File Configuration
-    **Current file path:** `{CSV_FILE_PATH}`
+    **Current file path:** `{PARQUET_FILE_PATH}`
 
-    *Edit the CSV_FILE_PATH variable in the cell above to point to your data file.*
+    *Edit the PARQUET_FILE_PATH variable in the cell above to point to your data file.*
     """)
-    return (CSV_FILE_PATH,)
+    return (PARQUET_FILE_PATH,)
 
 
 @app.cell(hide_code=True)
-def _(CSV_FILE_PATH, mo, os, pd):
+def _(PARQUET_FILE_PATH, mo, os, pd):
     initial_data_df = None
     _load_response = None
     try:
-        if os.path.exists(CSV_FILE_PATH):
-            initial_data_df = pd.read_parquet(CSV_FILE_PATH)
+        if os.path.exists(PARQUET_FILE_PATH):
+            initial_data_df = pd.read_parquet(PARQUET_FILE_PATH)
 
             # Add review columns if missing
             review_columns = ['reviewer_initials', 'review_timestamp', 'model_prediction_plausible', 
@@ -88,7 +88,7 @@ def _(CSV_FILE_PATH, mo, os, pd):
             - **Already reviewed:** {review_count}  
             """)
         else:
-            _load_response = mo.md(f"**File not found at:** `{CSV_FILE_PATH}`\n\nPlease check the file path and update the CSV_FILE_PATH variable.")
+            _load_response = mo.md(f"**File not found at:** `{PARQUET_FILE_PATH}`\n\nPlease check the file path and update the PARQUET_FILE_PATH variable.")
 
     except Exception as e:
         _load_response = mo.md(f"**Error loading file:** {str(e)}")
@@ -274,7 +274,7 @@ def _(mo):
 
 
 @app.cell
-def _(CSV_FILE_PATH, data_df, datetime, entry_slider, form, mo):
+def _(PARQUET_FILE_PATH, data_df, datetime, entry_slider, form, mo):
     # Handle review submission
     _warning = None
     if form.value and data_df is not None and entry_slider is not None:
@@ -294,7 +294,8 @@ def _(CSV_FILE_PATH, data_df, datetime, entry_slider, form, mo):
             # data_df.loc[review_idx, 'better_sic_available'] = (form.value['better_available'] == "Yes")
             # data_df.loc[review_idx, 'recommended_sic_code'] = form.value['recommended_sic'].strip() if form.value['recommended_sic'] else ""
             data_df.loc[review_idx, 'review_notes'] = form.value['review_notes'].strip() if form.value['review_notes'] else ""
-            data_df.to_csv(CSV_FILE_PATH, index=False)
+            data_df.to_parquet(PARQUET_FILE_PATH, index=False)
+            data_df.to_csv(PARQUET_FILE_PATH.replace('.parquet','.csv'), index=False)
             _warning = mo.md(f"✅ **Review saved successfully for entry {entry_slider.value}!**")
     _warning
 
