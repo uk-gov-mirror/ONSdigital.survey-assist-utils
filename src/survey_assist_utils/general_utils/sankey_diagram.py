@@ -4,25 +4,41 @@
 import pandas as pd
 import plotly.graph_objects as go
 
+###
+# Luke Notes
+#
+# 150 total:
+############
+# 90 CC Codable
+# -> 73 SA codable, 17 SA Not Codable
+# 60 CC Not Codable
+# -> 28 SA Codable, 32 SA Not Codable
+###
 # Create dataframe directly from your provided data
 data = [
-    # CC Codable -> SA Codable -> Exact match/Plausible (60 total from SA Codable)
-    *[['Codable', 'Codable', 'Exact match/Plausible']] * 45,
+    # CC Codable -> SA Codable -> Exact match/Plausible (62 total from SA Codable)
+    *[['Codable', 'Codable', 'Exact match/Plausible']] * 62, # DONE
     
     # CC Not codable -> SA Codable -> Exact match/Plausible (remaining 15 from SA Codable)
-    *[['Not codable', 'Codable', 'Exact match/Plausible']] * 15,
+    *[['Not codable', 'Codable', 'Exact match/Plausible']] * 11, 
     
     # CC Not codable -> SA Codable -> Not plausible (5 total from SA Codable)
-    *[['Not codable', 'Codable', 'Not plausible']] * 5,
+    *[['Not codable', 'Codable', 'Not plausible']] * 17, # DONE
     
     # CC Codable -> SA Not codable -> Exact match/Plausible (27 total from SA Not codable)
-    *[['Codable', 'Not codable', 'Exact match/Plausible']] * 15,
+    *[['Codable', 'Not codable', 'Exact match/Plausible']] * 11, # DONE
     
     # CC Not codable -> SA Not codable -> Exact match/Plausible (remaining 12 from SA Not codable)  
-    *[['Not codable', 'Not codable', 'Exact match/Plausible']] * 12,
+    *[['Not codable', 'Not codable', 'Exact match/Plausible']] * 21,
     
     # CC Not codable -> SA Not codable -> Not plausible (8 total from SA Not codable)
-    *[['Not codable', 'Not codable', 'Not plausible']] * 8,
+    *[['Not codable', 'Not codable', 'Not plausible']] * 11,
+
+    # CC Codable -> SA Codable -> Not plausible (? total from SA Codable)
+    *[['Codable', 'Codable', 'Not plausible']] * 11, 
+
+    # CC Codable -> SA Codable -> Not plausible (? total from SA Codable)
+    *[['Codable', 'Not codable', 'Not plausible']] * 6, 
 ]
 
 # Create DataFrame
@@ -63,25 +79,25 @@ def create_sankey_from_df(df):
     
     # Flow calculations
     flows = {
-        'cc_codable_to_sa_codable': 45,
-        'cc_codable_to_sa_not_codable': 15,
-        'cc_not_codable_to_sa_codable': 20,
-        'cc_not_codable_to_sa_not_codable': 20,
-        'sa_codable_to_exact_match': 60,
-        'sa_codable_to_not_plausible': 5,
-        'sa_not_codable_to_exact_match': 27,
-        'sa_not_codable_to_not_plausible': 8
+        'cc_codable_to_sa_codable': 62+11,
+        'cc_codable_to_sa_not_codable': 11+6,
+        'cc_not_codable_to_sa_codable': 11+17,
+        'cc_not_codable_to_sa_not_codable': 21+11,
+        'sa_codable_to_exact_match': 62+11,
+        'sa_codable_to_not_plausible': 17+11,
+        'sa_not_codable_to_exact_match': 11+21,
+        'sa_not_codable_to_not_plausible': 11+6
     }
     
     # Add percentages to node labels
     total = len(df)
     nodes_with_data = [
-        f"{nodes[0]}<br>{cc_codable_total} ({cc_codable_total}%)",
-        f"{nodes[1]}<br>{cc_not_codable_total} ({cc_not_codable_total}%)",
-        f"{nodes[2]}<br>{sa_codable_total} ({sa_codable_total}%)",
-        f"{nodes[3]}<br>{sa_not_codable_total} ({sa_not_codable_total}%)",
-        f"{nodes[4]}<br>{exact_match_total} ({exact_match_total}%)",
-        f"{nodes[5]}<br>{not_plausible_total} ({not_plausible_total}%)"
+        f"{nodes[0]}<br>{cc_codable_total} ({cc_codable_total*0.6666666:.1f}%)",
+        f"{nodes[1]}<br>{cc_not_codable_total} ({cc_not_codable_total*0.6666666:.1f}%)",
+        f"{nodes[2]}<br>{sa_codable_total} ({sa_codable_total*0.6666666:.1f}%)",
+        f"{nodes[3]}<br>{sa_not_codable_total} ({sa_not_codable_total*0.6666666:.1f}%)",
+        f"{nodes[4]}<br>{exact_match_total} ({exact_match_total*0.6666666:.1f}%)",
+        f"{nodes[5]}<br>{not_plausible_total} ({not_plausible_total*0.6666666:.1f}%)"
     ]
     
     # Create links
@@ -116,7 +132,7 @@ def create_sankey_from_df(df):
     )])
     
     fig.update_layout(
-        title="Clerical Coder vs Model Prediction Analysis<br><sub>n=100 cases</sub>",
+        title="Clerical Coder vs Model Prediction Analysis<br><sub>n=150 cases</sub>",
         font_size=12,
         width=1000,
         height=600
