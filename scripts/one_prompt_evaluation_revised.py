@@ -135,7 +135,7 @@ my_dataframe['All_Clerical_codes_parsed'] = my_dataframe["All_Clerical_codes"].a
 my_dataframe['top_clerical_code'] = my_dataframe['All_Clerical_codes_parsed'].apply(get_top_clerical_code)
 # Extract the codes from the model's alt_candidates as a list in a new column
 my_dataframe["alt_sic_candidate_parsed"] = my_dataframe["sic_candidates"].apply(
-    lambda x: [xi['code'] for xi in x] if len(x)>0 else []
+    lambda x: [xi['sic_code'] for xi in x] if len(x)>0 else []
 )
 
 # Note: The below function is not required in the one-prompt pipeline.
