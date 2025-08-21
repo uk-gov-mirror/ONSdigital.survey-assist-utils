@@ -1,3 +1,4 @@
+# pylint: disable=R0801, W0511
 import re
 from collections import namedtuple
 
@@ -7,7 +8,7 @@ from survey_assist_utils.evaluation.coder_alignment import ColumnConfig, LabelAc
 
 
 def parse_sic_candidates(candidates_str):
-    """Parse SIC candidates from SicCandidate string format"""
+    """Parse SIC candidates from SicCandidate string format."""
     if (
         pd.isna(candidates_str)
         or candidates_str == ""
@@ -22,7 +23,7 @@ def parse_sic_candidates(candidates_str):
 
     try:
         # Extract all RagCandidate entries using regex
-        pattern = r"SicCandidate\(sic_code='([^']+)', sic_descriptive='([^']+)', likelihood=([0-9.]+)\)"
+        pattern = r"SicCandidate\(sic_code='([^']+)', sic_descriptive='([^']+)', likelihood=([0-9.]+)\)"  # pylint: disable=C0301
         matches = re.findall(pattern, str(candidates_str))
 
         candidates = []
@@ -51,7 +52,7 @@ def parse_clerical_code(candidates_str: str):
         matches = re.findall(pattern, str(candidates_str))
 
         return matches
-    except Exception:
+    except Exception:  # pylint: disable=W0706 # TODO: introduce logging
         raise
 
 
@@ -92,7 +93,7 @@ merged_data["sic_candidate_list"] = merged_data["sic_candidates"].apply(
 for i in range(0, 10):
     merged_data["sic_candidate_" + str(i + 1)] = merged_data[
         "sic_candidate_list"
-    ].apply(lambda x: x[i].sic_code if len(x) > i else "")
+    ].apply(lambda x, i=i: x[i].sic_code if len(x) > i else "")
 
 for i in range(0, 10):
     merged_data["sic_candidate_score_" + str(i + 1)] = 0.5
@@ -102,7 +103,7 @@ merged_data["cc_list"] = merged_data["All_Clerical_codes"].apply(parse_clerical_
 
 for i in range(0, 5):
     merged_data["cc_candidate_" + str(i + 1)] = merged_data["cc_list"].apply(
-        lambda x: x[i] if len(x) > i else ""
+        lambda x, i=i: x[i] if len(x) > i else ""
     )
 
 # 7. Define the configuration for the test

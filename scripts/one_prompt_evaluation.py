@@ -1,3 +1,4 @@
+# pylint: disable=R0801, W0511
 import re
 from argparse import ArgumentParser as AP
 from collections import namedtuple
@@ -76,7 +77,7 @@ def parse_args():
 
 
 def parse_sic_candidates(candidates_str):
-    """Parse SIC candidates from SicCandidate string format"""
+    """Parse SIC candidates from SicCandidate string format."""
     candidates_array = np.array(candidates_str)
     if (
         (pd.isna(candidates_array)).all()
@@ -90,7 +91,7 @@ def parse_sic_candidates(candidates_str):
 
     try:
         # Extract all RagCandidate entries using regex
-        pattern = r"\{'likelihood':\s*[\d\.]+,\s*'sic_code':\s*'[\d]+'\}"
+        pattern = r"\{'likelihood':\s*[\d\.]+,\s*'sic_code':\s*'[\d]+'\}"  # noqa: F841
 
         candidates = []
         for item in candidates_array:
@@ -117,7 +118,7 @@ def parse_clerical_code(candidates_str: str):
         matches = re.findall(pattern, str(candidates_str))
 
         return matches
-    except Exception:
+    except Exception:  # pylint: disable=W0706 # TODO: introduce logging
         raise
 
 
@@ -133,7 +134,10 @@ def get_cc_data(cc_df_path):
 
 # Merge two datasets, preparing for the evaluation
 def merge_datasets(
-    prepared_data, cc_data, prepared_data_columns, clerical_data_columns
+    prepared_data,  # pylint: disable=W0621
+    cc_data,  # pylint: disable=W0621
+    prepared_data_columns,
+    clerical_data_columns,
 ):
     return prepared_data[prepared_data_columns].merge(
         cc_data[clerical_data_columns],
@@ -144,33 +148,35 @@ def merge_datasets(
 
 
 # Unpack sic_candidates into new individual columns
-def sic_candidates_individual(merged_data):
+def sic_candidates_individual(merged_data):  # pylint: disable=W0621
     for i in range(0, 10):
         merged_data["sic_candidate_" + str(i + 1)] = merged_data[
             "sic_candidate_list"
-        ].apply(lambda x: x[i].sic_code if len(x) > i else "")
+        ].apply(lambda x, i=i: x[i].sic_code if len(x) > i else "")
 
     for i in range(0, 10):
         merged_data["sic_candidate_score_" + str(i + 1)] = 0.5
 
 
 # Unpack CC labels
-def unpack_cc(merged_data):
+def unpack_cc(merged_data):  # pylint: disable=W0621
     merged_data["cc_list"] = merged_data["All_Clerical_codes"].apply(
         parse_clerical_code
     )
 
     for i in range(0, 5):
         merged_data["cc_candidate_" + str(i + 1)] = merged_data["cc_list"].apply(
-            lambda x: x[i] if len(x) > i else ""
+            lambda x, i=i: x[i] if len(x) > i else ""
         )
 
 
 def test_configuration(
     compare,
-):  # Future: parse how many columns form LLM compare to how many columns prepared by clerically coded.
-    # This example compares the top 3 model suggestions against 2 human-coded columns
-    # should we allow comparing different sets, e.g. 3v3, 5v2 (currently we do 3v2)
+):  # Future: parse how many columns form LLM compare to how many columns
+    # prepared by clerically coded.
+    # This example compares the top 3 model suggestions against 2 human-coded
+    # columns should we allow comparing different sets, e.g. 3v3, 5v2
+    # (currently we do 3v2).
     """Choose from OO, MM, OM, MO, where O stands for One, M stands for Many.
     First initial for clerically coded, second initial for LLM prepared data.
 
@@ -181,7 +187,7 @@ def test_configuration(
         _type_: _description_
     """
     if compare == "MM":
-        col_config = ColumnConfig(
+        col_config = ColumnConfig(  # pylint: disable=W0621
             clerical_label_cols=["cc_candidate_1", "cc_candidate_2"],
             model_label_cols=["sic_candidate_1", "sic_candidate_2", "sic_candidate_3"],
             model_score_cols=[
