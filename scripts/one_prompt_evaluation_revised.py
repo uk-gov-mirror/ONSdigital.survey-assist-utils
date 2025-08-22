@@ -1,5 +1,15 @@
 # pylint: disable=R0801, W0511
 #!/usr/bin/env python
+"""Script that calculates accuracy metrics for one prompt evaluation model.
+
+Takes evaluation_data, test_type, and match_type as positional arguments.
+
+Allows parsing --filter_unambiguous, --filter_ambiguous, and
+--neglect_impossible as optional atguments.
+
+Use:
+    -h, --help to show help message.
+"""
 import re
 from argparse import ArgumentParser as AP
 
@@ -174,15 +184,6 @@ my_dataframe["alt_sic_candidate_parsed"] = my_dataframe["sic_candidates"].apply(
     lambda x: [xi["sic_code"] for xi in x] if len(x) > 0 else []
 )
 
-# Note: The below function is not required in the one-prompt pipeline.
-# Add on the initial sic code if unambiguously codable
-# def get_extended_alt_candidates(row: pd.Series)->list[str]:
-#     candidate_list = row['alt_sic_candidate_parsed']
-#     if row['unambiguously_codable']:
-#         candidate_list.append(row['initial_code'])
-#     return candidate_list
-# my_dataframe["alt_sic_candidate_parsed_extended"] = my_dataframe.apply(get_extended_alt_candidates, axis=1) # pylint: disable=C0301
-
 # To minimise changes from the two-prompt version, duplicating this column with an updated name.
 my_dataframe["alt_sic_candidate_parsed_extended"] = my_dataframe[
     "alt_sic_candidate_parsed"
@@ -308,6 +309,19 @@ CLERICAL_COL_NAME = CLERICAL_LABEL_COL_PREFIX + SUFFIX  # pylint: disable=E0606
 
 # Define the row-wise applyable test function
 def compare_row(row: pd.Series) -> bool:
+    """Select the desired comparison method beteen codes selected by
+    Clerical Coder with codes selected by LLM tool.
+
+    Args:
+        row (pd.Series): rows containing data form CC and LLM to compare.
+
+    Raises:
+        ValueError: Rises when incorrect comparison methos id selected.
+
+    Returns:
+        bool: True if comparison method finds the specified number of matches
+            between CC and LLM results.
+    """
     if args.test_type == "OO":
         return compare_OO(row[CLERICAL_COL_NAME], row[MODEL_COL_NAME])
     if args.test_type == "OM":

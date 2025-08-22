@@ -1,5 +1,15 @@
 # pylint: disable=W0511
 #!/usr/bin/env python
+"""Script that calculates accuracy metrics for two prompts evaluation model.
+
+Takes evaluation_data, test_type, and match_type as positional arguments.
+
+Allows parsing --filter_unambiguous, --filter_ambiguous, and
+--neglect_impossible as optional atguments.
+
+Use:
+    -h, --help to show help message.
+"""
 import re
 from argparse import ArgumentParser as AP
 
@@ -173,6 +183,14 @@ my_dataframe["alt_sic_candidate_parsed"] = my_dataframe["alt_sic_candidates"].ap
 
 # Add on the initial sic code if unambiguously codable
 def get_extended_alt_candidates(row: pd.Series) -> list[str]:
+    """Extends list of alternative SIC code by the initial SIC code.
+
+    Args:
+        row (pd.Series): List of alternative SIC codes.
+
+    Returns:
+        list[str]: List of alternative SIC codes, including the initial code.
+    """
     candidate_list = row["alt_sic_candidate_parsed"]
     if row["unambiguously_codable"]:
         candidate_list.append(row["initial_code"])
@@ -300,6 +318,19 @@ CLERICAL_COL_NAME = CLERICAL_LABEL_COL_PREFIX + SUFFIX  # pylint: disable=E0606
 
 # Define the row-wise applyable test function
 def compare_row(row: pd.Series) -> bool:
+    """Select the desired comparison method beteen codes selected by
+    Clerical Coder with codes selected by LLM tool.
+
+    Args:
+        row (pd.Series): rows containing data form CC and LLM to compare.
+
+    Raises:
+        ValueError: Rises when incorrect comparison methos id selected.
+
+    Returns:
+        bool: True if comparison method finds the specified number of matches
+            between CC and LLM results.
+    """
     if args.test_type == "OO":
         return compare_OO(row[CLERICAL_COL_NAME], row[MODEL_COL_NAME])
     if args.test_type == "OM":
