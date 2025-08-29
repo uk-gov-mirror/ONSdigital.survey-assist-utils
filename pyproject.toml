@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "survey-assist-utils"
-version = "0.0.2"
+version = "0.0.3"
 description = "Utility module for Survey Assist"
 authors = ["Steve Gibbard <steve.gibbard@ons.gov.uk>"]
 license = "MIT"
@@ -9,7 +9,7 @@ readme = "README.md"
 packages = [{ include = "survey_assist_utils", from = "src" }]
 
 [tool.poetry.scripts]
-generate-api-token = "survey_assist_utils.api_token.jwt_utils:generate_api_token"
+generate-api-token = "survey_assist_utils.api_token.jwt_utils:main"
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -27,6 +27,7 @@ fsspec = "^2025.3.2"
 gcsfs = "^2025.3.2"
 langchain-google-vertexai = "0.0.1"
 langchain = "0.1.0"
+google-cloud-iam = "^2.19.1"
 
 [tool.poetry.group.dev.dependencies]
 mkdocs-material = "^9.6.7"
