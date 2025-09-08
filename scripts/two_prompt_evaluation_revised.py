@@ -21,28 +21,13 @@ def parse_clerical_code(row):
     stringified list to a proper list of strings.
     """
     all_clerical_codes = []
-    if row['sic_ind_occ1'] != None:
-        all_clerical_codes.append(row['sic_ind_occ1'])
-    if row['sic_ind_occ2'] != None:
-        all_clerical_codes.append(row['sic_ind_occ2'])
-    if row['sic_ind_occ3'] != None:
-        all_clerical_codes.append(row['sic_ind_occ3'])
+    if row["sic_ind_occ1"] is not None:
+        all_clerical_codes.append(row["sic_ind_occ1"])
+    if row["sic_ind_occ2"] is not None:
+        all_clerical_codes.append(row["sic_ind_occ2"])
+    if row["sic_ind_occ3"] is not None:
+        all_clerical_codes.append(row["sic_ind_occ3"])
     return all_clerical_codes
-    # if (
-    #     pd.isna(candidates_str)
-    #     or candidates_str == ""
-    #     or str(candidates_str).lower() == "nan"
-    # ):
-    #     return []
-
-    # try:
-    #     # Extract all RagCandidate entries using regex
-    #     pattern = r"([0-9]+x*X*)"
-    #     matches = re.findall(pattern, str(candidates_str))  # pylint: disable=W0621
-
-    #     return matches
-    # except Exception:  # pylint: disable=W0706 # TODO: introduce logging
-    #     raise
 
 
 def allocate_final_final_sic(row):
