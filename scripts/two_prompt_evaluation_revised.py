@@ -16,23 +16,30 @@ from argparse import ArgumentParser as AP
 import pandas as pd
 
 
-def parse_clerical_code(row):
+def parse_clerical_code(candidates_str: str):
     """Converts the clerical coder responses from a
     stringified list to a proper list of strings.
     """
-    all_clerical_codes = []
-    if row["sic_ind_occ1"] is not None:
-        all_clerical_codes.append(row["sic_ind_occ1"])
-    if row["sic_ind_occ2"] is not None:
-        all_clerical_codes.append(row["sic_ind_occ2"])
-    if row["sic_ind_occ3"] is not None:
-        all_clerical_codes.append(row["sic_ind_occ3"])
-    return all_clerical_codes
+    if (
+        pd.isna(candidates_str)
+        or candidates_str == ""
+        or str(candidates_str).lower() == "nan"
+    ):
+        return []
+
+    try:
+        # Extract all RagCandidate entries using regex
+        pattern = r"([0-9]+x*X*)"
+        matches = re.findall(pattern, str(candidates_str))  # pylint: disable=W0621
+
+        return matches
+    except Exception:  # pylint: disable=W0706 # TODO: introduce logging
+        raise
 
 
 def allocate_final_final_sic(row):
     """Handles the intermediate-result routing for what
-    should be considered the true final sic code.
+    shoulf be considered the true final sic code.
     """
     if row["unambiguously_codable"]:
         return row["initial_code"]
@@ -156,13 +163,13 @@ except FileNotFoundError as e:
 
 # Apply filtering (if specified)
 if args.filter_unambiguous:
-    my_dataframe = my_dataframe[my_dataframe["unambiguously_codable"]]
+    my_dataframe = my_dataframe[my_dataframe["Unambiguous"]]
 elif args.filter_ambiguous:
-    my_dataframe = my_dataframe[~my_dataframe["unambiguously_codable"]]
+    my_dataframe = my_dataframe[~my_dataframe["Unambiguous"]]
 
 # Parse clerical coder column to actual list of strings
-my_dataframe["All_Clerical_codes_parsed"] = my_dataframe.apply(
-    parse_clerical_code, axis=1
+my_dataframe["All_Clerical_codes_parsed"] = my_dataframe["All_Clerical_codes"].apply(
+    parse_clerical_code
 )
 # Extract the top clerical code as new column, for ease of comparisons
 my_dataframe["top_clerical_code"] = my_dataframe["All_Clerical_codes_parsed"].apply(
