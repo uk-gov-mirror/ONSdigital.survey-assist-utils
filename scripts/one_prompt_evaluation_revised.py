@@ -43,21 +43,20 @@ def allocate_final_final_sic(row: pd.Series):
     """
     if row["final_sic"] is not None:
         return row["final_sic"]
-    else:
-        higher_level_list = []
-        for j in row["alt_sic_candidates"]:
-            higher_level_list.append(j["sic_code"])
-        first_sic_code = higher_level_list[0]
-        higher_level_code = ""
-        for k in range(5):
-            digit = first_sic_code[k]
-            is_mutual = all(code[k] == digit for code in higher_level_list)
-            if is_mutual:
-                higher_level_code += digit
-            else:
-                higher_level_code += "x" * (5 - k)
-                break
-        return higher_level_code
+    higher_level_list = []
+    for j in row["alt_sic_candidates"]:
+        higher_level_list.append(j["sic_code"])
+    first_sic_code = higher_level_list[0]
+    higher_level_code = ""
+    for k in range(5):
+        digit = first_sic_code[k]
+        is_mutual = all(code[k] == digit for code in higher_level_list)
+        if is_mutual:
+            higher_level_code += digit
+        else:
+            higher_level_code += "x" * (5 - k)
+            break
+    return higher_level_code
 
 
 def get_top_clerical_code(codes: list) -> str:
