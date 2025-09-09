@@ -45,8 +45,8 @@ def allocate_final_final_sic(row: pd.Series):
         return row["final_sic"]
     if row["final_sic"] is None:
         higher_level_list = []
-        for j in row['alt_sic_candidates']:
-            higher_level_list.append(j['sic_code'])
+        for j in row["alt_sic_candidates"]:
+            higher_level_list.append(j["sic_code"])
         first_sic_code = higher_level_list[0]
         higher_level_code = ""
         for k in range(5):
@@ -55,7 +55,7 @@ def allocate_final_final_sic(row: pd.Series):
             if is_mutual:
                 higher_level_code += digit
             else:
-                higher_level_code += "x"*(5-k)
+                higher_level_code += "x" * (5 - k)
                 break
         return higher_level_code
 
