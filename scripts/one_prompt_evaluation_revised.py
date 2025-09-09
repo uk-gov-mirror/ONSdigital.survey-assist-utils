@@ -43,7 +43,7 @@ def allocate_final_final_sic(row: pd.Series):
     """
     if row["final_sic"] is not None:
         return row["final_sic"]
-    if row["final_sic"] is None:
+    else:
         higher_level_list = []
         for j in row["alt_sic_candidates"]:
             higher_level_list.append(j["sic_code"])
@@ -58,7 +58,6 @@ def allocate_final_final_sic(row: pd.Series):
                 higher_level_code += "x" * (5 - k)
                 break
         return higher_level_code
-    return "xxxxx"
 
 
 def get_top_clerical_code(codes: list) -> str:
