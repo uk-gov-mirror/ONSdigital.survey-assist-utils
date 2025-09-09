@@ -37,16 +37,27 @@ def parse_clerical_code(candidates_str: str):
         raise
 
 
-def allocate_final_final_sic(
-    row,
-):  # pylint: disable=W0613 # disable due to current bug in assigning sic_code
+def allocate_final_final_sic(row: pd.Series):
     """Handles the intermediate-result routing for what
-    shoulf be considered the true final sic code.
-    NOTE: Due to current bug in the codebase, final_sic
-    is not currently populated, so we will simply assign
-    an empty string for the time being.
+    should be considered the true final sic code.
     """
-    return ""
+    if row["final_sic"] is not None:
+        return row["final_sic"]
+    if row["final_sic"] is None:
+        higher_level_list = []
+        for j in row['alt_sic_candidates']:
+            higher_level_list.append(j['sic_code'])
+        first_sic_code = higher_level_list[0]
+        higher_level_code = ""
+        for k in range(5):
+            digit = first_sic_code[k]
+            is_mutual = all(code[k] == digit for code in higher_level_list)
+            if is_mutual:
+                higher_level_code += digit
+            else:
+                higher_level_code += "x"*(5-k)
+                break
+        return higher_level_code
 
 
 def get_top_clerical_code(codes: list) -> str:
@@ -180,7 +191,7 @@ my_dataframe["top_clerical_code"] = my_dataframe["All_Clerical_codes_parsed"].ap
     get_top_clerical_code
 )
 # Extract the codes from the model's alt_candidates as a list in a new column
-my_dataframe["alt_sic_candidate_parsed"] = my_dataframe["sic_candidates"].apply(
+my_dataframe["alt_sic_candidate_parsed"] = my_dataframe["alt_sic_candidates"].apply(
     lambda x: [xi["sic_code"] for xi in x] if len(x) > 0 else []
 )
 
