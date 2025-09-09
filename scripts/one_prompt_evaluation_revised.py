@@ -58,6 +58,7 @@ def allocate_final_final_sic(row: pd.Series):
                 higher_level_code += "x" * (5 - k)
                 break
         return higher_level_code
+    return "xxxxx"
 
 
 def get_top_clerical_code(codes: list) -> str:
