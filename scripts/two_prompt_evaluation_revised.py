@@ -35,14 +35,6 @@ def parse_clerical_code(candidates_str: str):
         return matches
     except Exception:  # pylint: disable=W0706 # TODO: introduce logging
         raise
-    # all_clerical_codes = []
-    # if row["sic_ind_occ1"] is not None:
-    #     all_clerical_codes.append(row["sic_ind_occ1"])
-    # if row["sic_ind_occ2"] is not None:
-    #     all_clerical_codes.append(row["sic_ind_occ2"])
-    # if row["sic_ind_occ3"] is not None:
-    #     all_clerical_codes.append(row["sic_ind_occ3"])
-    # return all_clerical_codes
 
 
 def allocate_final_final_sic(row):
