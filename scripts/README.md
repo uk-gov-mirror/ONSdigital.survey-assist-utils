@@ -17,8 +17,11 @@ Once Poetry is installed, set up the project by running
 poetry install
 ```
 ### Data
-To access the data, use the TLFS data. You can find it in the GCP bucket `survey_assist_sandbox_data/evaluation_pipeline_persisted_data/original_datasets/tlfs_2k_eval_set.csv`.
+To access the data, use the TLFS data. You can find it in the GCP bucket.
 1. Start up the vector store (`sic-classification-vector-store` repo, run `make run-vector-store`).
+
+In the `sic-classification-utils` repo (steps 2-4):
+
 2. Authenticate/re-authenticate gcloud `gcloud auth application-default login`.
 3. Create the metadata file (template is available in `sic-classification-utils` repo in `scripts/stage_1_add_semantic_search.py` within the module-level docstring)
 4. Process the data using scripts, according to the one- or two- prompt approach. It is recommended to use `run_full_pipeline.sh`, available in `sic_classification_utils/scripts`.
@@ -33,6 +36,7 @@ To access the data, use the TLFS data. You can find it in the GCP bucket `survey
 The data will be saved in the specified folder (e.g., OnePromptOutputs, or TwoPromptOutputs) as `STG2_oneprompt.parquet` for one prompt pipeline, or `STG5.parquet` for two prompts pipeline.
 
 ## Usage
+Move the data (`STG2_oneprompt.parquet` and `STG5.parquet`) to this repo (`survey-assist-utils`).
 To run the evaluation for **one prompt** use:
 ```
 python scripts/one_prompt_evaluation_revised.py data/STG2_oneprompt.parquet <OO / MM / OM / MO> <full / 2-digit> <-fua / -fa> -n
