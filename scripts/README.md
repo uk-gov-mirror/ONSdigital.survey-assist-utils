@@ -77,3 +77,8 @@ total considered: [b]
 
 The output informs which records were selected (ambiguous/unambiguous/all), and if specified, the number of records ignored, as well as the test and match type, followed with the metrics of accuracy, number of matches and number of non matches, number of non-matches, and total number of responses considered.</br>
 The accuracy is calculated as a percentage of matches divided by the total responses considered in the metric.
+
+## Abbreviations
+- CC - Clerical Coder
+- SA - Survey Assist
+- SIC - Standard Industrial Classification
