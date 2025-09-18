@@ -8,7 +8,7 @@ It allows to calculate the accuracy of the assignment as a percentage for one or
 ## Setup
 ### Prerequsites
 This project uses Poetry for dependency management. Please ensure you have Poetry installed.
-- Pyhton 3.12
+- Python 3.12
 - Poetry
 - Google Cloud SDK
 
