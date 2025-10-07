@@ -35,21 +35,65 @@ Ensure you have the following installed on your local machine:
     cd survey-assist-utils
     ```
 
-2.  **Install Dependencies**
+2. **Create and activate a virtual environment**
+
+    Using `pyenv` and `pyenv-virtualenv`:
+
+    ```bash
+    python3.12 -m venv .venv
+    source .venv/bin/activate
+    ```
+
+3.  **Install Dependencies**
     ```bash
     poetry install
     ```
 
-3.  **Generate an API Token**
-    Set the required environment variables:
+4. **Generate an API Token**
+
+    The API uses Application Default Credentials to generate and authenticate tokens.
+
+    Ensure GOOGLE_APPLICATION_CREDENTIALS are not set in your environment.
+
     ```bash
-    export GOOGLE_APPLICATION_CREDENTIALS="/path/to/GCP_CREDENTIALS.json"
-    export SA_EMAIL="GCP-SERVICE-ACCOUNT@SERVICE-ACCOUNT-ID.iam.gserviceaccount.com"
-    export JWT_SECRET=/path/to/GCP/secret.json
+    unset GOODLE_APPLICATION_CREDENTIALS
     ```
-    Then, run the make command:
+
+    Login to gcloud application default:
+
+    ```bash
+    gcloud auth application-default login
+    ```
+
+    Set to the correct GCP project:
+
+    ```bash
+    gcloud auth application-default set-quota-project GCP-PROJECT-NAME
+    ```
+
+    Check the project setting:
+
+    ```bash
+    cat ~/.config/gcloud/application_default_credentials.json
+    ```
+
+    Set the required environment variables:
+
+    ```bash
+    export SA_EMAIL="SERVICE-ACCOUNT-FOR-API-ACCESS"
+    export API_GATEWAY="API GATEWAY URL NOT INC https://"
+    ```
+
+    Then, run the make command to use default expiry (1h):
+
     ```bash
     make generate-api-token
+    ```
+
+    You can run from cli and pass in a chosen expiry time:
+
+    ```bash
+    poetry run generate-api-token -e 7200
     ```
 
 ## Code Quality & Testing
@@ -80,23 +124,35 @@ Pytest is used for testing.
     make all-tests
     ```
 
+### Pre-commit Hooks
+
+Pre-commit hooks are set up to run code quality checks before each commit. They will call `make check-python` under the hood as well.
+To install the hooks, run:
+
+```bash
+pre-commit install
+```
+
+### Pre-commit Hooks
+
+Pre-commit hooks are set up to run code quality checks before each commit. They will call `make check-python` under the hood as well.
+To install the hooks, run:
+
+```bash
+pre-commit install
+```
+
 
 # Methodology for evaluating alignment between clerical coders and Survey Assist outputs
 
-## Overview
-
-This repository provides a framework for processing batches of survey data through the Survey Assist system and evaluating the quality of the LLM's SIC code classifications. The process starts with a labelled set of survey data and ends with a detailed performance analysis.
-
-## The Data
-The source of the data is TLFS sets of labelled data that have been annotated by expert coders. 
-The annotation isn't required for the processing, only for the evaluation.
-
 ## The Evaluation Workflow
 
-The end-to-end process is handled by a series of scripts that form a data pipeline:
+See [`scripts/evaluation_metrics.md`](./scripts/evaluation_metrics.md) for details on running the evaluation scripts.
+
+**Legacy notes on the evaluation process:**
 
 ### DataCleaner
-This can be run using the script 
+This can be run using the script
 example_data_runner.py
 
 ### Json processing and merging
@@ -126,17 +182,15 @@ This runner sctipt reads the csv provided by the previous stages in the data pip
     * **Input:** A merged DataFrame containing both the raw LLM output from Stage 1 and the enriched human-coded data from Stage 2.
     * **Process:** The `LabelAccuracy` class takes this combined data and calculates a suite of metrics to measure the alignment between the LLM's suggestions and the human-provided ground truth.
     * **Output:** Quantitative metrics and visualisations (e.g., heatmaps, charts) that summarise the model's performance.
+    * **Output:** Quantitative metrics and visualisations (e.g., heatmaps, charts) that summarise the model's performance.
 
-## Human Coder Alignment
 
-* **Dataset:** The evaluation is performed against a 2,000-record sample from across all SIC sections, containing expert SIC assignments.
-* **Unambiguous Subset:** A key part of the analysis focuses on "Unambiguous" responses, where a human coder provided only a single, complete 5-digit SIC code. This provides a clean baseline for model performance and can be enabled via a flag in the `ColumnConfig`.
-
-## Core Evaluation Metrics
+**Core Evaluation Metrics**
 
 The `coder_alignment` module provides several key metrics to assess performance from different angles:
 
 * **Match Accuracy:** This is the primary KPI, measuring how often a correct code appears anywhere in the model's suggestion list. It provides a top-level view of whether the model is providing useful answers.
+* **Jaccard Similarity:** This metric is to measure the overall relevance of the suggestion list. It helps determine if the model's suggestions are closely align with the human coder's choices
 * **Jaccard Similarity:** This metric is to measure the overall relevance of the suggestion list. It helps determine if the model's suggestions are closely align with the human coder's choices
 * **Candidate Ranking & Contribution:** This analysis assesses the value of each individual suggestion (e.g., the 3rd or 5th candidate). It helps answer business questions about the optimal number of suggestions to display to a user.
 * **Error Pattern Analysis (Confusion Matrix):** This provides a visual heatmap to diagnose systematic errors. It shows if the model consistently confuses two specific codes, and is used for prompt engineering and model improvement.
