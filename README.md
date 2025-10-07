@@ -94,16 +94,16 @@ The annotation isn't required for the processing, only for the evaluation.
 ## The Evaluation Workflow
 
 The end-to-end process is handled by a series of scripts that form a data pipeline:
-* to do * 
-Refactoring - DataCleaner moved to own module
 
 ### DataCleaner
 This can be run using the script 
 example_data_runner.py
 
-The output for this will be the input to the next stage which is work in progress.
-
-
+### Json processing and merging
+The output for this will be the input to the next stage as follows:
+### Metrics Runner
+`python metrics_runner.py data/final_processed_output.csv configs/evaluation_config.toml`
+This runner sctipt reads the csv provided by the previous stages in the data pipeline. It then applies the metrics described in the configuratoin file to allow
 
 
 1.  **Stage 1: Batch Processing (`process_tlfs_evaluation_data.py`)**
