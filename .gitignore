@@ -11,7 +11,7 @@
 *.png
 *.jpg
 *.pdf
-*.bmp 
+*.bmp
 
 # ignore jupyter notebooks
 *.ipynb
@@ -148,6 +148,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.*venv
 env/
 venv/
 ENV/
