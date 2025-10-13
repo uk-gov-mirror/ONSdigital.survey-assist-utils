@@ -1,0 +1,304 @@
+job_title | job_description | industry_description
+data scientist | make and assess predictive models, other statistics | Software development
+Software Engineer|Developing and maintaining web applications to meet client requirements and scale.|Technology sector focused on innovative software as a service solutions.
+Data Scientist|Analyzing large datasets to extract actionable insights and drive business decisions.|Fast-paced financial technology firm specializing in algorithmic trading and analytics.
+Product Manager|Defining product vision, strategy, and roadmap for new digital products.|E-commerce and retail industry leader for consumer electronics and goods.
+Marketing Director|Leading marketing campaigns and digital strategy to increase brand awareness globally.|Global media and entertainment conglomerate producing film, television, and streaming content.
+UX/UI Designer|Creating intuitive and user-friendly interfaces for mobile and web platforms.|A design-centric startup building tools for creative professionals and agencies.
+DevOps Engineer|Automating and streamlining operations and processes for cloud infrastructure deployment.|Cloud computing provider offering scalable infrastructure and platform services.
+Financial Analyst|Building financial models and conducting variance analysis to support corporate planning.|Investment banking firm providing merger and acquisition advisory services.
+Human Resources Generalist|Managing employee relations, recruitment, and benefits administration for the organization.|Healthcare organization with a network of hospitals and specialty clinics.
+Lead Mechanical Engineer|Designing and testing mechanical components for next-generation aerospace systems.|Aerospace and defense contractor building advanced aircraft and defense technology.
+Senior Content Strategist|Developing content marketing initiatives to drive user engagement and lead generation.|Digital marketing agency serving clients in the B2B technology space.
+Chief Technology Officer|Setting the company's technical vision and leading the engineering department.|Venture-backed startup in the renewable energy and sustainability sector.
+Junior Graphic Designer|Creating visual assets for social media, websites, and print marketing materials.|Boutique advertising agency with a focus on lifestyle and fashion brands.
+Network Administrator|Maintaining and securing the corporate network infrastructure across multiple office locations.|Telecommunications company providing internet, mobile, and television services.
+Customer Success Manager|Building strong relationships with key clients to ensure retention and satisfaction.|Enterprise software company specializing in customer relationship management (CRM).
+Civil Engineer|Overseeing the design and construction of public infrastructure projects like bridges.|Governmental public works department focused on urban infrastructure development.
+Head of Sales|Driving revenue growth by leading the national sales team and strategy.|A fast-growing SaaS company in the business intelligence and analytics market.
+Research Scientist|Conducting experiments and analyzing data in the field of biotechnology.|Pharmaceutical company developing novel therapeutics for rare genetic diseases.
+IT Support Specialist|Providing technical assistance and troubleshooting for all internal hardware and software.|Large educational institution with multiple campuses and online learning programs.
+Operations Manager|Optimizing supply chain logistics and warehouse operations for maximum efficiency.|International logistics and shipping company with a massive global footprint.
+Associate Consultant|Supporting senior consultants on client projects involving strategic business transformation.|Top-tier management consulting firm advising Fortune 500 companies.
+Data Engineer|Building and maintaining scalable data pipelines for real-time data processing.|Social media platform with a focus on video content and creators.
+Principal Architect|Leading the architectural design of complex, distributed software systems.|Financial services corporation specializing in payment processing and digital wallets.
+Scrum Master|Facilitating agile development processes and removing impediments for the engineering team.|Insurance company undergoing a large-scale digital transformation initiative.
+Technical Writer|Producing clear and concise documentation for software APIs and user guides.|Open-source software foundation dedicated to building developer tools.
+Quality Assurance Tester|Executing manual and automated tests to ensure software quality and reliability.|Video game development studio known for its popular AAA franchises.
+Global Logistics Coordinator|Managing international shipments and ensuring compliance with trade regulations.|Automotive manufacturer with a complex global supply chain network.
+Brand Manager|Developing and executing brand strategy for a portfolio of consumer products.|Consumer packaged goods (CPG) company with well-known household brands.
+Cloud Solutions Architect|Designing and implementing secure and scalable cloud solutions for enterprise clients.|A leading provider of multi-cloud management and consulting services.
+Digital Marketing Specialist|Managing paid search and social media advertising campaigns to generate leads.|Real estate technology platform for buying, selling, and renting properties.
+Senior Systems Analyst|Analyzing and improving IT systems and business processes for efficiency.|Major airline carrier with complex reservation and operational systems.
+Corporate Recruiter|Sourcing and hiring top talent for various roles across the company.|A hyper-growth technology company in the cybersecurity space.
+Lead Product Designer|Mentoring a team of designers and setting the design direction.|Health and wellness app developer focused on mental fitness.
+Database Administrator|Managing, backing up, and ensuring the performance of company databases.|Healthcare IT provider for electronic health records (EHR) systems.
+Public Relations Manager|Building and maintaining a positive public image for the company.|Non-profit organization focused on environmental conservation and advocacy.
+Business Development Representative|Generating and qualifying new business leads for the sales team.|A B2B SaaS startup providing project management software solutions.
+AI/ML Engineer|Developing machine learning models for predictive analytics and personalization.|An artificial intelligence research lab with commercial and academic partnerships.
+Construction Project Manager|Planning and overseeing construction projects from inception to completion.|Commercial real estate development firm specializing in mixed-use properties.
+Executive Assistant|Providing high-level administrative support to C-suite executives.|A multinational law firm with offices in major financial centers.
+Instructional Designer|Creating engaging and effective training materials for employee development programs.|Corporate training and development company serving a diverse client base.
+Cybersecurity Analyst|Monitoring for security threats and responding to incidents to protect assets.|A managed security service provider (MSSP) for small and medium businesses.
+Retail Store Manager|Overseeing daily store operations, staff management, and customer service.|Luxury fashion retailer with flagship stores in major international cities.
+Biomedical Engineer|Designing and developing medical devices and equipment for patient care.|Medical device manufacturer specializing in cardiovascular and orthopedic products.
+Supply Chain Analyst|Analyzing supply chain data to identify opportunities for cost reduction.|A large grocery store chain with a complex distribution network.
+Head of People|Leading the human resources function and shaping company culture.|A mid-sized tech company consistently voted a "best place to work".
+Junior Web Developer|Assisting the development team with front-end coding and website maintenance.|A small web design and development agency for local businesses.
+Chief Financial Officer|Overseeing all financial operations and strategy for the entire organization.|Publicly traded manufacturing company with a long history of stability.
+Video Producer|Creating and editing video content for marketing and internal communications.|A fast-growing media company with a strong online video presence.
+Food Scientist|Developing new food products and improving existing ones through research.|A major food and beverage corporation with a global brand portfolio.
+Environmental Health Officer|Ensuring compliance with environmental health and safety regulations.|Governmental agency responsible for public health and safety standards.
+Technical Program Manager|Managing cross-functional engineering programs to deliver complex technical projects.|A large technology company known for its hardware and software ecosystem.
+Paralegal|Assisting lawyers by preparing legal documents and conducting legal research.|A corporate law firm specializing in intellectual property and patents.
+Account Executive|Closing new business deals and managing relationships with enterprise customers.|A leading cloud communications platform offering API-based services.
+Marine Biologist|Studying marine organisms and their interactions with the ecosystem.|A marine research institute and aquarium dedicated to ocean conservation.
+User Researcher|Conducting qualitative and quantitative research to understand user needs and behaviors.|A user experience research consultancy working with tech clients.
+Flight Attendant|Ensuring the safety and comfort of passengers during air travel.|An international airline known for its high level of customer service.
+Architect|Designing buildings and spaces for commercial and residential clients.|An architectural firm renowned for its sustainable and modern designs.
+Pharmacist|Dispensing medications and providing pharmaceutical care to patients.|A large retail pharmacy chain with locations across the country.
+Social Media Manager|Managing the company's presence on various social media platforms.|A direct-to-consumer startup in the beauty and skincare industry.
+Geologist|Studying the earth's structure and substances for resource extraction.|An energy company specializing in oil and gas exploration.
+Event Coordinator|Planning and executing corporate events, conferences, and trade shows.|An event management company that organizes large-scale industry events.
+Librarian|Managing library resources and assisting patrons with information retrieval.|A public library system serving a large metropolitan area.
+Veterinarian|Providing medical care for animals, including diagnosis and treatment.|A private veterinary clinic specializing in small animal medicine.
+Electrician|Installing and maintaining electrical systems in buildings and infrastructure.|A construction contractor specializing in electrical and wiring services.
+Chef|Creating menus and overseeing food preparation in a restaurant kitchen.|A fine-dining restaurant with a focus on seasonal and local ingredients.
+Police Officer|Enforcing laws and ensuring public safety within the community.|A municipal police department in a major urban center.
+Teacher|Educating students in a specific subject area at the secondary level.|A public high school in a suburban school district.
+Nurse Practitioner|Providing primary and specialty healthcare services to diverse patient populations.|A community health clinic serving underserved and rural populations.
+Real Estate Agent|Assisting clients with buying, selling, and renting properties.|A national real estate brokerage with a strong local presence.
+Plumber|Installing and repairing plumbing systems in residential and commercial buildings.|A family-owned plumbing and heating services company.
+Firefighter|Responding to fires and other emergencies to protect life and property.|A city fire department serving a dense urban environment.
+Accountant|Preparing and examining financial records for accuracy and compliance.|A certified public accounting (CPA) firm providing audit and tax services.
+Physical Therapist|Helping patients recover from injuries and illnesses through rehabilitation.|An outpatient physical therapy clinic specializing in sports medicine.
+Journalist|Investigating and reporting on news and events for a media outlet.|A national news organization with a focus on investigative journalism.
+Paramedic|Providing emergency medical care to patients in pre-hospital settings.|An emergency medical services (EMS) provider for a county.
+Interior Designer|Planning and designing interior spaces for functional and aesthetic appeal.|An interior design firm specializing in high-end residential projects.
+Pilot|Operating aircraft for commercial airlines to transport passengers and cargo.|A major cargo airline with a global logistics network.
+Dentist|Diagnosing and treating problems with patients' teeth and gums.|A private dental practice offering general and cosmetic dentistry.
+Mechanic|Inspecting, maintaining, and repairing vehicles for customers.|An independent auto repair shop specializing in foreign cars.
+Welder|Joining metal parts using various welding techniques for fabrication.|A manufacturing plant that produces heavy machinery and equipment.
+Lawyer|Advising and representing clients in legal matters and disputes.|A boutique law firm focused on family law and estate planning.
+Chiropractor|Treating patients with health problems of the neuromusculoskeletal system.|A wellness center offering chiropractic care and massage therapy.
+Optometrist|Examining eyes for vision problems and prescribing corrective lenses.|A private optometry practice and optical store.
+Landscaper|Designing, creating, and maintaining outdoor spaces and gardens.|A landscaping company serving residential and commercial properties.
+Psychologist|Assessing and treating mental and emotional disorders in patients.|A mental health clinic providing therapy and counseling services.
+Carpenter|Constructing, installing, and repairing wooden structures and fixtures.|A custom home builder specializing in high-end residential construction.
+Artist|Creating works of art using various media for exhibition and sale.|An independent artist with a studio in a creative arts district.
+Musician|Composing, performing, and recording music for audiences.|A freelance musician performing in various bands and ensembles.
+Actor|Performing in plays, films, or television shows to entertain audiences.|A theater actor working with a regional repertory company.
+Dancer|Performing dance for live audiences or for film and television.|A professional ballet company with a national and international touring schedule.
+Photographer|Taking and editing photographs for clients or for artistic expression.|A freelance wedding and event photographer with a distinct style.
+Writer|Creating written content for books, articles, or other media.|A freelance author working on a series of fantasy novels.
+Film Director|Overseeing the creative aspects of a film production.|An independent film director known for critically acclaimed documentaries.
+Animator|Creating animation and visual effects for films, games, or television.|An animation studio that produces content for major streaming services.
+Fashion Designer|Designing clothing and accessories for commercial production.|A high-fashion brand with a focus on avant-garde and couture designs.
+Athletic Trainer|Preventing, diagnosing, and treating muscle and bone injuries and illnesses.|A university athletic department providing care for student-athletes.
+Statistician|Applying statistical theories and methods to solve practical problems.|A government agency responsible for collecting and analyzing national data.
+Actuary|Analyzing the financial costs of risk and uncertainty for insurance.|A large insurance company specializing in life and health insurance.
+Lobbyist|Representing the interests of an organization to government officials.|A political consulting firm working on behalf of trade associations.
+Translator|Converting written material from one language to another.|A freelance translator specializing in legal and technical documents.
+Curator|Acquiring, caring for, and developing collections for a museum or gallery.|A major art museum with a world-renowned collection of modern art.
+Conservation Scientist|Managing and protecting natural resources like forests and parks.|A national park service dedicated to preserving natural and cultural resources.
+Urban Planner|Developing land use plans and programs for urban and regional areas.|A city planning department focused on sustainable urban development.
+Forensic Scientist|Collecting and analyzing physical evidence for criminal investigations.|A state crime lab providing forensic services to law enforcement agencies.
+Astronomer|Studying celestial objects, space, and the physical universe.|A university observatory conducting research in astrophysics.
+Meteorologist|Studying the atmosphere and forecasting weather conditions.|A national weather service providing public weather forecasts and warnings.
+Sociologist|Studying human society and social behavior through research.|A university sociology department with a focus on social inequality.
+Historian|Researching, analyzing, and interpreting the past through historical documents.|A historical society and museum dedicated to preserving local history.
+Archaeologist|Studying human history and prehistory through the excavation of sites.|An archaeological research project at an ancient historical site.
+Political Scientist|Studying the origin, development, and operation of political systems.|A think tank focused on international relations and public policy.
+Economist|Studying the production and distribution of resources, goods, and services.|A federal reserve bank conducting economic research and analysis.
+Anthropologist|Studying human beings and their ancestors through time and space.|A cultural anthropology research project studying indigenous communities.
+Cartographer|Creating and designing maps for various purposes and clients.|A geographic information system (GIS) services company.
+Speech Pathologist|Assessing and treating communication and swallowing disorders.|A school district providing speech therapy services to students.
+Occupational Therapist|Helping people with injuries or disabilities participate in everyday activities.|A rehabilitation hospital providing comprehensive therapy services.
+Radiologic Technologist|Performing diagnostic imaging examinations like X-rays and CT scans.|A hospital imaging department serving inpatient and outpatient needs.
+Dental Hygienist|Cleaning teeth and examining patients for signs of oral diseases.|A group dental practice with multiple locations in the region.
+Medical Assistant|Performing administrative and clinical tasks to support medical staff.|A busy primary care physician's office with a large patient base.
+Phlebotomist|Drawing blood from patients for tests, transfusions, or donations.|A clinical laboratory services company with patient service centers.
+Veterinary Technician|Assisting veterinarians in providing medical care to animals.|An animal hospital providing emergency and specialty veterinary care.
+Personal Trainer|Developing and implementing personalized exercise programs for clients.|A fitness center and gym with a focus on personal training.
+Massage Therapist|Performing therapeutic massage to relieve pain and promote wellness.|A spa and wellness center offering a variety of therapeutic services.
+Esthetician|Providing skincare treatments to enhance the appearance of the skin.|A day spa and salon offering facials, waxing, and other treatments.
+Hair Stylist|Cutting, styling, and coloring hair for clients.|A high-end hair salon in a fashionable urban neighborhood.
+Barista|Preparing and serving coffee and other beverages to customers.|A popular local coffee shop known for its specialty coffee.
+Bartender|Mixing and serving drinks to customers in a bar or restaurant.|An upscale cocktail bar with a creative and extensive drink menu.
+Server|Taking orders and serving food and beverages to customers in a restaurant.|A casual dining restaurant with a lively and fast-paced atmosphere.
+Line Cook|Preparing food on the line in a restaurant kitchen.|A busy restaurant kitchen serving a high volume of customers.
+Hotel Manager|Overseeing all operations of a hotel to ensure guest satisfaction.|A luxury hotel and resort in a popular tourist destination.
+Concierge|Assisting hotel guests with reservations, transportation, and other needs.|A five-star hotel known for its exceptional customer service.
+Travel Agent|Planning and booking travel arrangements for clients.|A travel agency specializing in luxury and adventure travel.
+Tour Guide|Leading tours for visitors at historical sites, museums, or attractions.|A historical city tour company offering walking and bus tours.
+Event Planner|Organizing and coordinating all aspects of events for clients.|A corporate event planning company that manages large-scale conferences.
+Wedding Planner|Assisting couples with the planning and coordination of their wedding.|A boutique wedding planning service for luxury and destination weddings.
+Real Estate Appraiser|Estimating the value of real property for various purposes.|An independent real estate appraisal firm serving financial institutions.
+Insurance Agent|Selling insurance policies to individuals and businesses.|A local branch of a national insurance company.
+Loan Officer|Assisting applicants in obtaining loans from financial institutions.|A mortgage lending company that works with first-time homebuyers.
+Financial Advisor|Providing financial advice and planning services to clients.|An independent financial advisory firm specializing in retirement planning.
+Stockbroker|Buying and selling stocks and other securities for clients.|A brokerage firm that provides investment services to retail clients.
+Underwriter|Evaluating and assuming the risk of insurance policies or loans.|An insurance company's underwriting department for commercial lines.
+Claims Adjuster|Investigating insurance claims to determine the extent of liability.|An insurance company's claims department handling property and casualty.
+Tax Preparer|Preparing and filing tax returns for individuals and businesses.|A tax preparation service with seasonal and year-round clients.
+Bookkeeper|Recording financial transactions and maintaining financial records for businesses.|A small business accounting service providing bookkeeping and payroll.
+Payroll Specialist|Processing payroll and managing employee compensation and benefits.|A company's internal payroll department for a large workforce.
+Auditor|Examining financial records for accuracy and compliance with regulations.|An internal audit department of a large publicly traded corporation.
+Cost Estimator|Forecasting the cost, size, and duration of future projects.|A construction company's estimating department for bidding on projects.
+Management Analyst|Advising managers on how to improve organizational efficiency.|A consulting firm that specializes in business process improvement.
+Market Research Analyst|Analyzing market conditions to examine potential sales of a product.|A market research firm that conducts surveys and focus groups.
+Survey Researcher|Designing and conducting surveys and analyzing the collected data.|A public opinion polling organization that tracks social and political trends.
+Fundraiser|Organizing events and campaigns to raise money for an organization.|A non-profit organization's development department focused on major gifts.
+Grant Writer|Writing proposals to obtain grant funding from foundations or government.|A non-profit organization that relies heavily on grant funding.
+Social Worker|Helping people cope with challenges in their lives.|A child protective services agency working with families in crisis.
+School Counselor|Assisting students with academic, career, and personal development.|A high school counseling department providing college and career guidance.
+Career Counselor|Helping individuals with career choices and professional development.|A university career services office assisting students and alumni.
+Rehabilitation Counselor|Helping people with disabilities live more independently.|A state vocational rehabilitation agency serving clients with disabilities.
+Mental Health Counselor|Treating individuals and groups with mental and emotional health issues.|A community mental health center providing counseling and therapy.
+Substance Abuse Counselor|Providing treatment and support to individuals with substance use disorders.|A residential treatment center for addiction and recovery.
+Marriage and Family Therapist|Helping couples and families navigate and resolve relationship issues.|A private practice specializing in couples and family therapy.
+Clergy|Serving as a spiritual leader for a religious congregation.|A community church with a diverse and active congregation.
+Director of Religious Education|Overseeing educational programs within a religious organization.|A large parish with a comprehensive religious education program.
+Choreographer|Creating and arranging dance routines and performances.|A contemporary dance company known for its innovative choreography.
+Music Director|Leading musical groups like choirs and orchestras.|A community choir that performs a wide range of musical genres.
+Set and Exhibit Designer|Designing sets for theater, film, or television, or exhibits for museums.|A theater company's production department responsible for set design.
+Costume Designer|Designing costumes for performances in theater, film, or television.|A costume shop that provides designs for various productions.
+Makeup Artist|Applying makeup to performers for theater, film, or television.|A freelance makeup artist working on film and television sets.
+Sound Engineering Technician|Operating equipment to record, mix, or reproduce sound.|A recording studio that works with a variety of musical artists.
+Broadcast Technician|Setting up and operating equipment for television or radio broadcasts.|A local television news station with live daily broadcasts.
+Camera Operator|Operating cameras for film, television, or video productions.|A live sports broadcasting crew covering professional sporting events.
+Film and Video Editor|Assembling and editing raw footage into a finished product.|A post-production house that edits commercials and corporate videos.
+Art Director|Overseeing the visual style and images in media productions.|An advertising agency's creative department responsible for visual concepts.
+Industrial Designer|Developing the concepts for manufactured products, such as cars or appliances.|A product design consultancy that works with consumer electronics brands.
+Landscape Architect|Planning and designing outdoor spaces like parks and campuses.|An architectural firm specializing in landscape and urban design.
+Graphic Illustrator|Creating detailed illustrations for books, magazines, and other media.|A freelance illustrator specializing in children's book illustrations.
+Web Administrator|Maintaining and updating websites to ensure they function correctly.|A large e-commerce company's web operations team.
+Game Designer|Designing the core concepts and mechanics of video games.|A video game development studio creating new intellectual properties.
+Multimedia Artist|Creating art and effects for use in various media.|A visual effects studio working on major blockbuster films.
+Court Reporter|Transcribing spoken or recorded speech into written form for legal proceedings.|A freelance court reporter working in various legal settings.
+Simultaneous Interpreter|Translating speech from one language to another in real-time.|An international conference that requires interpretation in multiple languages.
+Archivist|Assessing, collecting, and preserving valuable historical records.|A university's special collections library and archive.
+Technical Illustrator|Creating technical drawings and diagrams for manuals and publications.|An engineering firm that requires detailed technical documentation.
+Drafter|Using software to convert designs of engineers and architects into technical drawings.|An architectural firm's drafting department producing construction documents.
+Mapping Technician|Collecting and interpreting geographic data to create maps.|A government agency that produces and maintains official maps.
+Aerospace Engineer|Designing and building aircraft, spacecraft, and related systems.|A government space agency involved in space exploration missions.
+Agricultural Engineer|Solving problems related to agriculture, such as equipment and land use.|A company that develops innovative agricultural technology and machinery.
+Chemical Engineer|Applying principles of chemistry and engineering to solve problems.|A chemical manufacturing company that produces specialty chemicals.
+Computer Hardware Engineer|Designing and testing computer components and systems.|A semiconductor company that designs and manufactures microprocessors.
+Electrical Engineer|Designing and developing new electrical equipment and systems.|A consumer electronics company that develops innovative new products.
+Electronics Engineer|Designing and testing electronic components and circuits.|A company that specializes in designing custom electronic systems.
+Environmental Engineer|Using engineering principles to improve and protect the environment.|An environmental consulting firm that works on remediation projects.
+Health and Safety Engineer|Designing systems and procedures to protect people from illness and injury.|A manufacturing company with a strong focus on workplace safety.
+Industrial Engineer|Devising efficient systems that integrate workers, machines, and materials.|A logistics and supply chain company optimizing warehouse operations.
+Materials Engineer|Developing, processing, and testing materials used to create products.|A research and development lab focused on advanced materials science.
+Mining and Geological Engineer|Designing mines for the safe and efficient removal of minerals.|A mining company that operates large-scale mining operations.
+Nuclear Engineer|Researching and developing the processes and systems of nuclear energy.|A nuclear power plant that generates electricity for the region.
+Petroleum Engineer|Designing and developing methods for extracting oil and gas.|An oil and gas exploration and production company.
+Agricultural and Food Scientist|Researching ways to improve the efficiency and safety of agricultural products.|A research institution focused on sustainable agriculture practices.
+Animal Scientist|Conducting research on domestic farm animals for production purposes.|A university's animal science department with a focus on genetics.
+Soil and Plant Scientist|Studying the composition of soil and its effect on plant growth.|An agricultural research station that conducts field trials.
+Biochemist and Biophysicist|Studying the chemical and physical principles of living things.|A biotechnology company that develops new diagnostic tools.
+Microbiologist|Studying microorganisms such as bacteria, viruses, and fungi.|A public health laboratory that tests for infectious diseases.
+Zoologist and Wildlife Biologist|Studying animals and wildlife and their interactions with ecosystems.|A conservation organization that works to protect endangered species.
+Epidemiologist|Investigating patterns and causes of disease and injury in humans.|A government public health agency that tracks disease outbreaks.
+Medical Scientist|Conducting research aimed at improving overall human health.|A medical research institute affiliated with a major university.
+Hydrologist|Studying the movement, distribution, and quality of water.|A government agency that manages water resources and quality.
+Atmospheric Scientist|Studying the weather and climate and their effects on the Earth.|A research center that studies climate change and its impacts.
+Postsecondary Teacher|Instructing students in a wide variety of academic and vocational subjects.|A community college that offers a range of associate degree programs.
+Preschool Teacher|Educating and caring for children younger than age 5.|A private preschool with a play-based learning curriculum.
+Kindergarten and Elementary Teacher|Teaching basic academic, social, and other formative skills to children.|A public elementary school in a diverse urban neighborhood.
+Middle School Teacher|Teaching academic subjects to students in grades 6 through 8.|A middle school with a focus on project-based learning.
+High School Teacher|Instructing students in a specific subject, such as English or math.|A large suburban high school with a strong academic reputation.
+Special Education Teacher|Working with students who have a wide range of learning disabilities.|A special education program within a public school district.
+Adult Basic Education Teacher|Teaching adults basic skills such as reading, writing, and math.|A community-based organization that offers adult literacy programs.
+Librarian Assistant|Assisting librarians with daily tasks and helping library patrons.|A university library's circulation desk and patron services.
+Museum Technician|Helping curators by preparing and maintaining museum collections.|A natural history museum's collections management department.
+Cardiovascular Technologist|Conducting tests on the heart and lungs.|A hospital's cardiology department performing diagnostic procedures.
+Diagnostic Medical Sonographer|Using ultrasound equipment to create images of the body.|An outpatient imaging center that provides a variety of scans.
+Nuclear Medicine Technologist|Administering radioactive drugs for imaging or therapeutic purposes.|A hospital's nuclear medicine department.
+Surgical Technologist|Assisting in surgical operations under the supervision of surgeons.|A hospital's operating room team for a variety of surgical procedures.
+Licensed Practical Nurse|Providing basic nursing care under the direction of registered nurses.|A long-term care facility and nursing home.
+Medical Records Technician|Organizing and managing health information data.|A hospital's health information management department.
+Optician|Helping customers with fitting and dispensing eyeglasses and contact lenses.|An optical store within a large retail chain.
+Pharmacy Technician|Assisting pharmacists with dispensing medication.|A busy retail pharmacy that fills a high volume of prescriptions.
+Psychiatric Technician|Providing therapeutic care to patients with mental or emotional conditions.|An inpatient psychiatric hospital and treatment center.
+Radiation Therapist|Administering radiation treatments to patients with cancer.|A hospital's radiation oncology department.
+Recreational Therapist|Planning and directing recreation-based treatment programs for patients.|A rehabilitation hospital's therapeutic recreation department.
+Respiratory Therapist|Caring for patients who have trouble breathing.|A hospital's respiratory care department, including the ICU.
+Emergency Medical Technician|Providing emergency medical care and transport for the sick and injured.|A private ambulance service that provides emergency response.
+Athletic Coach|Instructing amateur or professional athletes in a particular sport.|A high school athletic program for a competitive sports team.
+Fitness Instructor|Leading group exercise classes at a gym or fitness center.|A boutique fitness studio that offers high-intensity interval training.
+Referee and Umpire|Officiating at sporting events to maintain standards of play.|A local sports league for youth and adult recreational sports.
+Animal Control Worker|Handling animals for the purpose of investigation of mistreatment.|A municipal animal shelter and control agency.
+Animal Trainer|Training animals for riding, security, performance, or obedience.|A dog training facility that offers obedience classes and private training.
+Groomer|Bathing, clipping, and styling pets, usually dogs and cats.|A pet grooming salon that offers a full range of services.
+First-Line Supervisor of Police|Directly supervising and coordinating the activities of police officers.|A police department's patrol division leadership team.
+Detective and Criminal Investigator|Investigating crimes and gathering evidence to solve cases.|A police department's detective bureau for major crimes.
+Fish and Game Warden|Patrolling assigned areas to enforce fish and game laws.|A state wildlife agency's law enforcement division.
+Bailiff|Maintaining order and security in a courtroom.|A county courthouse and judicial system.
+Correctional Officer|Guarding inmates in correctional institutions.|A state prison and correctional facility.
+Probation Officer|Supervising offenders on probation to ensure they follow court orders.|A county probation department for adult offenders.
+Security Guard|Patrolling and protecting property against theft and vandalism.|A private security company that provides guards for commercial properties.
+Crossing Guard|Helping pedestrians and students safely cross streets.|A school district's safety program for elementary schools.
+Lifeguard|Monitoring swimming areas to prevent accidents and rescue swimmers.|A public swimming pool and aquatic center during the summer season.
+Transportation Security Officer|Screening passengers and baggage at airports for security threats.|A federal agency responsible for transportation security.
+Private Detective|Conducting investigations for clients on a private basis.|A private investigation agency that handles corporate and personal cases.
+Gaming Surveillance Officer|Observing casino operations for cheating or theft.|A large casino and resort's security and surveillance department.
+Ski Patroller|Providing emergency medical care and assistance at a ski resort.|A ski resort's safety and patrol team during the winter season.
+Animal Breeder|Selectively breeding animals to produce offspring with desired traits.|A professional breeder of purebred dogs for show and companionship.
+Butcher|Cutting, trimming, and preparing meat for sale.|A local butcher shop that specializes in high-quality, custom cuts.
+Baker|Mixing and baking ingredients to produce breads, pastries, and other goods.|A neighborhood bakery known for its artisanal breads and cakes.
+Food Batchmaker|Operating equipment to mix and cook ingredients for food products.|A food manufacturing plant that produces sauces and condiments.
+Food Cooking Machine Operator|Operating equipment that cooks food products in large quantities.|A large-scale food processing facility for frozen meals.
+Computer-Controlled Machine Operator|Operating computer-controlled machines to fabricate parts.|A manufacturing facility that uses CNC machines for precision parts.
+Welding, Soldering, and Brazing|Joining metal components using various heating processes.|A metal fabrication shop that creates custom metal products.
+Assembler and Fabricator|Assembling finished products and the parts that go into them.|An electronics assembly plant that produces consumer devices.
+Power Plant Operator|Controlling and monitoring machinery to generate electric power.|An electric utility company's power generation station.
+Water Treatment Plant Operator|Operating systems to treat and purify water for public use.|A municipal water utility that provides clean drinking water.
+Chemical Plant Operator|Operating equipment to produce chemicals and related products.|A large chemical manufacturing complex.
+Petroleum Pump System Operator|Operating petroleum refining and processing units.|An oil refinery that processes crude oil into various products.
+Gas Plant Operator|Operating equipment to process and distribute natural gas.|A natural gas processing facility.
+Aircraft Cargo Handling Supervisor|Supervising the loading and unloading of cargo onto aircraft.|An air cargo company's ground operations at a major airport.
+Railroad Conductor|Coordinating the activities of train crews on freight or passenger trains.|A major freight railroad company.
+Subway and Streetcar Operator|Operating public transit vehicles like subways and streetcars.|A city's public transportation authority.
+Sailor and Marine Oiler|Operating and maintaining vessels that take cargo and people over water.|A shipping company that operates a fleet of container ships.
+Captain, Mate, and Pilot of Water|Commanding or supervising the operations of water vessels.|A ferry service that transports passengers and vehicles.
+Motorboat Operator|Operating small motor-driven boats for transport or other purposes.|A tour boat company that offers sightseeing cruises.
+Ambulance Driver|Driving ambulances to transport sick or injured persons.|An emergency medical services provider.
+Bus Driver, Transit and Intercity|Driving buses to transport people over fixed routes.|A regional transit authority that operates a bus system.
+Bus Driver, School|Transporting students to and from school and other activities.|A school district's transportation department.
+Shuttle Driver|Driving vans or small buses to transport people to and from locations.|An airport shuttle service that serves local hotels.
+Taxi Driver|Driving automobiles to transport passengers for a fee.|An independent taxi driver working in a metropolitan area.
+Heavy and Tractor-Trailer Truck|Driving large trucks to transport goods over long distances.|A national trucking and logistics company.
+Light Truck or Delivery Driver|Driving small trucks or vans to deliver goods to customers.|A local courier and delivery service.
+Industrial Truck and Tractor|Operating industrial trucks or tractors to move materials.|A warehouse and distribution center for a large retailer.
+Crane and Tower Operator|Operating cranes or towers to lift and move materials.|A large construction site for a new high-rise building.
+Dredge Operator|Operating dredging equipment to excavate and remove material from waterways.|A marine construction company that maintains shipping channels.
+Excavating and Loading Machine|Operating heavy machinery to excavate and move earth.|An earthmoving contractor working on a new highway project.
+Automotive Service Technician|Inspecting, maintaining, and repairing cars and light trucks.|A car dealership's service center.
+Diesel Service Technician|Inspecting, repairing, and maintaining diesel engines.|A truck repair shop that services commercial fleets.
+Small Engine Mechanic|Repairing and servicing small engines on outdoor power equipment.|A local shop that repairs lawnmowers and other small engines.
+Motorcycle Mechanic|Repairing and maintaining motorcycles.|A motorcycle dealership and service center.
+Aircraft Mechanic|Inspecting, repairing, and maintaining aircraft.|An airline's maintenance, repair, and overhaul (MRO) facility.
+Avionics Technician|Installing, inspecting, and repairing aircraft electronic systems.|An aviation electronics repair station.
+Rail Car Repairer|Repairing and maintaining railroad cars.|A railroad company's car maintenance and repair shop.
+Mobile Heavy Equipment Mechanic|Repairing and maintaining heavy construction and industrial equipment.|A heavy equipment rental company's service department.
+Heating and Air Conditioning|Installing, maintaining, and repairing HVAC systems.|A residential and commercial HVAC service company.
+Refrigeration Mechanic|Installing and repairing industrial and commercial refrigeration systems.|A company that services refrigeration systems for supermarkets.
+Home Appliance Repairer|Repairing and maintaining household appliances like washers and refrigerators.|An independent appliance repair service.
+Telecommunications Equipment|Installing and maintaining telecommunications equipment.|A telecommunications company's field service technician team.
+Computer, ATM, and Office Machine|Repairing and maintaining computer and office equipment.|A third-party IT support company for small businesses.
+Locksmith and Safe Repairer|Repairing and installing locks, safes, and security systems.|A local locksmith service for residential and commercial clients.
+Wind Turbine Technician|Inspecting, diagnosing, and repairing wind turbines.|A renewable energy company that operates wind farms.
+Solar Panel Installer|Installing and maintaining solar panels on rooftops or other structures.|A solar energy company that specializes in residential installations.
+Cabinetmaker and Bench Carpenter|Cutting, shaping, and assembling wooden articles, like cabinets.|A custom cabinetry shop for high-end kitchens and homes.
+Furniture Finisher|Shaping, finishing, and repairing damaged and worn furniture.|A furniture restoration and repair shop.
+Floor Layer|Installing and finishing flooring materials like carpet, wood, and tile.|A flooring contractor for residential and commercial projects.
+Glazier|Installing glass in windows, skylights, and other fixtures.|A glass and window installation company.
+Insulation Worker|Installing and replacing materials to insulate buildings.|An insulation contractor for new construction and retrofitting.
+Painter, Construction|Applying paint, stain, and coatings to buildings and structures.|A painting contractor for residential and commercial properties.
+Paperhanger|Covering interior walls and ceilings with decorative wallpaper.|A specialized contractor for high-end wallpaper installation.
+Roofer|Repairing and installing roofs on buildings.|A roofing company that works on residential and commercial roofs.
+Sheet Metal Worker|Fabricating and installing products made from thin metal sheets.|An HVAC company that fabricates its own ductwork.
+Structural Iron and Steel Worker|Installing iron or steel girders, columns, and other structures.|A construction company that specializes in steel erection.
+Solar Photovoltaic Installer|Assembling and installing solar panels on rooftops.|A renewable energy company focused on solar power.
