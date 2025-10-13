@@ -1,11 +1,25 @@
 # ignore data files
 *.csv
+*.xls
 *.xlsx
 *.json
-/data/evaluation_data/
-/data/analysis_output/
-/data/
 *.png
+*.html
+*.parquet
+*.pkl
+*.dat
+*.npy
+*.npz
+*.zip
+*.gz
+/data/
+
+# ignore temporary files
+*.tmp
+*.aux
+tmp/
+temp/
+
 
 # ignore pictures and graphs of data
 *.png
