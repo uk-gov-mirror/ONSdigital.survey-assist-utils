@@ -29,14 +29,13 @@ def _backoff(
     count = 1
     while True:
         if count > max_attempts:
-            try:
+            if logger:
                 logger.error(  # type: ignore[union-attr]
                     f"Exceeded maximum attempts ({max_attempts}) for BigQuery write."
                 )
-            finally:
-                raise StopIteration(
-                    f"failed to write after maximum ({max_attempts}) attempts"
-                )
+            raise StopIteration(
+                f"failed to write after maximum ({max_attempts}) attempts"
+            )
         yield count, wait
         wait *= backoff_factor
         count += 1
