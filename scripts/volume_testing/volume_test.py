@@ -141,38 +141,65 @@ def step_1(  # pylint: disable=R0917,R0913 # noqa: PLR0913
 ):
     """Step 1: Measure latency of a web request."""
     logger_tool.debug(f"Step 1: Initiating API call to {API_GATEWAY}{ENDPOINT}")
+
+    request_succeeded = False
     start = time.time()
-    response = requests.post(
-        f"{API_GATEWAY}{ENDPOINT}", json=payload, headers=headers, timeout=60
-    )
     try:
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        logger_tool.error(
-            f"Step 1: API call failed with status code {response.status_code}: {e}"
+        response = requests.post(
+            f"{API_GATEWAY}{ENDPOINT}", json=payload, headers=headers, timeout=60
         )
-        raise
+        try:
+            response.raise_for_status()
+            request_succeeded = True
+            response_status_code = response.status_code
+            response_time = response.elapsed.total_seconds()
+        except requests.exceptions.HTTPError as e:
+            logger_tool.error(
+                f"Step 1: API call failed with status code {response.status_code}: {e}"
+            )
+            response_status_code = response.status_code
+            response_time = response.elapsed.total_seconds()
+    except (requests.exceptions.ReadTimeout, TimeoutError) as e:
+        logger_tool.error(f"Step 1: API call timed out: {e}")
+        response_status_code = "Timeout"
+        response_time = float("inf")
     logger_tool.debug(
-        f"Step 1: API call completed with status code {response.status_code}"
+        f"Step 1: API call completed with status code {response_status_code}"
     )
-    response_time = response.elapsed.total_seconds()
     end = time.time()
     latency = end - start
-    result = {
-        "test_id": [test_id],
-        "test_description": [test_description],
-        "test_timestamp": [test_timestamp],
-        "step": [1],
-        "total_latency": [latency],
-        "response_time": [response_time],
-        "status_code": [f"{response.status_code}"],
-        "job_title": [payload["job_title"]],
-        "job_description": [payload["job_description"]],
-        "org_description": [payload["org_description"]],
-        "classified": [int(response.json()["results"][0]["classified"])],
-        "followup": [response.json()["results"][0]["followup"]],
-        "code": [f"{response.json()["results"][0]["code"]}"],
-    }
+    if request_succeeded:
+        result = {
+            "test_id": [test_id],
+            "test_description": [test_description],
+            "test_timestamp": [test_timestamp],
+            "step": [1],
+            "total_latency": [latency],
+            "response_time": [response_time],
+            "status_code": [f"{response_status_code}"],
+            "job_title": [payload["job_title"]],
+            "job_description": [payload["job_description"]],
+            "org_description": [payload["org_description"]],
+            "classified": [int(response.json()["results"][0]["classified"])],
+            "followup": [response.json()["results"][0]["followup"]],
+            "code": [f"{response.json()["results"][0]["code"]}"],
+        }
+    else:
+        result = {
+            "test_id": [test_id],
+            "test_description": [test_description],
+            "test_timestamp": [test_timestamp],
+            "step": [1],
+            "total_latency": [latency],
+            "response_time": [response_time],
+            "status_code": [f"{response_status_code}"],
+            "job_title": [payload["job_title"]],
+            "job_description": [payload["job_description"]],
+            "org_description": [payload["org_description"]],
+            "classified": [0],
+            "followup": [""],
+            "code": [""],
+        }
     logger_tool.debug("Step 1: Preparing to write results to BigQuery.")
     write_to_bq(
         result,
