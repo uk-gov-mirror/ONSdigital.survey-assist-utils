@@ -22,7 +22,7 @@ load_dotenv(dotenv_path=env_path)
 
 # Set up constants
 PROJECT_ID = os.getenv("PROJECT_ID")
-API_GATEWAY_URL = os.getenv("API_GATEWAY_URL")
+API_GATEWAY = os.getenv("API_GATEWAY")
 SA_EMAIL = os.getenv("SA_EMAIL")
 ENDPOINT = "/v1/survey-assist/classify"
 BQ_DATASET_ID = os.getenv("BQ_DATASET_ID")
@@ -119,10 +119,10 @@ def step_1(  # pylint: disable=R0917,R0913 # noqa: PLR0913
     headers: dict,
 ):
     """Step 1: Measure latency of a web request."""
-    logger_tool.debug(f"Step 1: Initiating API call to {API_GATEWAY_URL}{ENDPOINT}")
+    logger_tool.debug(f"Step 1: Initiating API call to {API_GATEWAY}{ENDPOINT}")
     start = time.time()
     response = requests.post(
-        f"{API_GATEWAY_URL}{ENDPOINT}", json=payload, headers=headers, timeout=60
+        f"{API_GATEWAY}{ENDPOINT}", json=payload, headers=headers, timeout=60
     )
     try:
         response.raise_for_status()
@@ -159,7 +159,7 @@ def step_1(  # pylint: disable=R0917,R0913 # noqa: PLR0913
         schema,
         gcp_kwargs={
             "project_id": PROJECT_ID,
-            "url": API_GATEWAY_URL,
+            "url": API_GATEWAY,
             "table_name": TABLE_NAME,
         },
     )
@@ -187,7 +187,7 @@ def main(args, logger_tool):
     # Parse sync_time as UTC+0
     sync_time = datetime.datetime.strptime(args.test_sync_timestamp, "%H:%M:%S").time()
     request_payload = prepare_payload("fake_data/fake_responses.csv", logger_tool)
-    request_headers = prepare_auth(API_GATEWAY_URL, SA_EMAIL, logger_tool)
+    request_headers = prepare_auth(API_GATEWAY, SA_EMAIL, logger_tool)
     now = datetime.datetime.now(datetime.timezone.utc)
     time_to_wait = (
         datetime.datetime.combine(now.date(), sync_time, tzinfo=datetime.timezone.utc)
