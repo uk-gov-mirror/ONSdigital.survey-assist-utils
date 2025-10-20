@@ -235,7 +235,7 @@ def main(args, logger_tool):
     # Parse sync_time as UTC+0
     sync_time = datetime.datetime.strptime(args.test_sync_timestamp, "%H:%M:%S").time()
     request_payload = prepare_payload(
-        "fake_data/fake_responses.csv", logger_tool, args.userow
+        "../../data/artificial_data/fake_responses.csv", logger_tool, args.userow
     )
     request_headers = prepare_auth(API_GATEWAY, SA_EMAIL, logger_tool)
     now = datetime.datetime.now(datetime.timezone.utc)
