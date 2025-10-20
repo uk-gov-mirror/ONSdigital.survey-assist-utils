@@ -2,6 +2,7 @@
 
 import logging
 import time
+from typing import Optional
 
 import pandas as pd
 import pandas_gbq as pgbq
@@ -17,10 +18,25 @@ def schema_entry(name: str, datatype: str, mode: str, description: str) -> dict:
     }
 
 
-def _backoff(initial_wait=3, backoff_factor=1.5):
+def _backoff(
+    initial_wait: float = 3.0,
+    backoff_factor: float = 1.5,
+    max_attempts: int = 5,
+    logger: Optional[logging.Logger] = None,
+):
+    """Generator for exponential backoff timing."""
     wait = initial_wait
     count = 1
     while True:
+        if count > max_attempts:
+            try:
+                logger.error(  # type: ignore[union-attr]
+                    f"Exceeded maximum attempts ({max_attempts}) for BigQuery write."
+                )
+            finally:
+                raise StopIteration(
+                    f"failed to write after maximum ({max_attempts}) attempts"
+                )
         yield count, wait
         wait *= backoff_factor
         count += 1
@@ -35,7 +51,7 @@ def write_to_bq(
     """Write the result to BigQuery."""
     df = pd.DataFrame(result)
 
-    for attempt, wait_time in _backoff():
+    for attempt, wait_time in _backoff(logger=logger):
         try:
             pgbq.to_gbq(
                 df,
