@@ -2,10 +2,8 @@
 
 import argparse
 import datetime
-import logging
 import os
 import random
-import sys
 import time
 from pathlib import Path
 
@@ -15,6 +13,9 @@ from export_to_bq import schema_entry, write_to_bq
 
 from survey_assist_utils.api_token.jwt_utils import (  # pylint: disable=C0411
     generate_jwt,
+)
+from survey_assist_utils.logging import (
+    get_logger,
 )
 
 env_path = Path(__file__).resolve().parent.parent.parent / ".env"
@@ -26,7 +27,7 @@ if env_path.exists():
 def check_constant(
     const_name: str,
     env_var: str,
-    logger_tool: logging.Logger,
+    logger_tool,
     required: bool = True,
 ) -> bool:
     """Check an environment variable, log an error if it's required and not set."""
@@ -71,7 +72,7 @@ schema = [
 ]
 
 
-def prepare_auth(api_gateway_url: str, sa_email: str, logger_tool: logging.Logger):
+def prepare_auth(api_gateway_url: str, sa_email: str, logger_tool):
     """Generates a JWT token and forms authorisation headers."""
     logger_tool.debug("Generating api token...")
     try:
@@ -85,9 +86,7 @@ def prepare_auth(api_gateway_url: str, sa_email: str, logger_tool: logging.Logge
     return auth_headers
 
 
-def prepare_payload(
-    fake_data_csv: str, logger_tool: logging.Logger, row: int | None = None
-) -> dict:
+def prepare_payload(fake_data_csv: str, logger_tool, row: int | None = None) -> dict:
     """Reads a random line from a CSV and prepares the request payload."""
     try:
         logger_tool.debug(f"Reading fake responses csv file: '{fake_data_csv}'")
@@ -135,7 +134,7 @@ def step_1(  # pylint: disable=R0917,R0913 # noqa: PLR0913
     test_id: int,
     test_description: str,
     test_timestamp: str,
-    logger_tool: logging.Logger,
+    logger_tool,
     payload: dict,
     headers: dict,
 ):
@@ -216,15 +215,7 @@ def step_1(  # pylint: disable=R0917,R0913 # noqa: PLR0913
 
 def setup_logger():
     """Set up the logger."""
-    logger_tool = logging.getLogger("loadrunner")
-    logger_tool.handlers.clear()
-    logger_tool.setLevel(LOG_LEVEL.upper())
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    sh = logging.StreamHandler(sys.stdout)
-    sh.setFormatter(formatter)
-    logger_tool.addHandler(sh)
+    logger_tool = get_logger("volume_test", level=LOG_LEVEL.upper())
     return logger_tool
 
 

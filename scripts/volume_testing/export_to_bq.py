@@ -1,8 +1,6 @@
 """BigQuery interaction utilities to support volume testing."""
 
-import logging
 import time
-from typing import Optional
 
 import pandas as pd
 import pandas_gbq as pgbq
@@ -22,7 +20,7 @@ def _backoff(
     initial_wait: float = 3.0,
     backoff_factor: float = 1.5,
     max_attempts: int = 5,
-    logger: Optional[logging.Logger] = None,
+    logger=None,
 ):
     """Generator for exponential backoff timing."""
     wait = initial_wait
@@ -30,7 +28,7 @@ def _backoff(
     while True:
         if count > max_attempts:
             if logger:
-                logger.error(  # type: ignore[union-attr]
+                logger.error(
                     f"Exceeded maximum attempts ({max_attempts}) for BigQuery write."
                 )
             raise StopIteration(
@@ -43,7 +41,7 @@ def _backoff(
 
 def write_to_bq(
     result: dict,
-    logger: logging.Logger,
+    logger,
     schema: list[dict],
     gcp_kwargs: dict,
 ) -> None:
