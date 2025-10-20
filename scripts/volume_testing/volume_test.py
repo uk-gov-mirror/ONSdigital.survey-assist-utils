@@ -18,15 +18,31 @@ from survey_assist_utils.api_token.jwt_utils import (  # pylint: disable=C0411
 )
 
 env_path = Path(__file__).resolve().parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+
+
+def get_env_var(
+    name: str,
+    required: bool = True,
+    default: str | None = None,
+    logger_tool: logging.Logger | None = None,
+) -> str | None:
+    """Get an environment variable, log an error if it's required and not set."""
+    value = os.getenv(name, default)
+    if required and (value is None) and logger_tool:
+        logger_tool.error(f"Required environment variable {name} not set")
+    return value
+
 
 # Set up constants
-PROJECT_ID = os.getenv("PROJECT_ID")
-API_GATEWAY = os.getenv("API_GATEWAY")
-SA_EMAIL = os.getenv("SA_EMAIL")
+PROJECT_ID = get_env_var(name="PROJECT_ID", required=True)
+API_GATEWAY = get_env_var(name="API_GATEWAY", required=True)
+SA_EMAIL = get_env_var(name="SA_EMAIL", required=True)
 ENDPOINT = "/v1/survey-assist/classify"
-BQ_DATASET_ID = os.getenv("BQ_DATASET_ID")
-TABLE_ID = os.getenv("TABLE_ID")
+BQ_DATASET_ID = get_env_var(name="BQ_DATASET_ID", required=True)
+TABLE_ID = get_env_var(name="TABLE_ID", required=True)
 TABLE_NAME = f"{PROJECT_ID}.{BQ_DATASET_ID}.{TABLE_ID}"
 LOG_LEVEL = "DEBUG"
 
