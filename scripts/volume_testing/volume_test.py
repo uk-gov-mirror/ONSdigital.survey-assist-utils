@@ -43,8 +43,8 @@ API_GATEWAY = os.getenv("API_GATEWAY", "")
 SA_EMAIL = os.getenv("SA_EMAIL", "")
 ENDPOINT = "/v1/survey-assist/classify"
 BQ_DATASET_ID = os.getenv("BQ_DATASET_ID", "")
-TABLE_ID = os.getenv("TABLE_ID", "")
-TABLE_NAME = f"{PROJECT_ID}.{BQ_DATASET_ID}.{TABLE_ID}"
+BQ_TABLE_ID = os.getenv("BQ_TABLE_ID", "")
+BQ_TABLE_NAME = f"{PROJECT_ID}.{BQ_DATASET_ID}.{BQ_TABLE_ID}"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
 
 # Define schema
@@ -177,7 +177,7 @@ def step_1(  # pylint: disable=R0917,R0913 # noqa: PLR0913
         gcp_kwargs={
             "project_id": PROJECT_ID,
             "url": API_GATEWAY,
-            "table_name": TABLE_NAME,
+            "table_name": BQ_TABLE_NAME,
         },
     )
     logger_tool.debug("Step 1: Results written to BigQuery.")
@@ -267,8 +267,8 @@ if __name__ == "__main__":
         "SA_EMAIL": SA_EMAIL,
         "ENDPOINT": ENDPOINT,
         "BQ_DATASET_ID": BQ_DATASET_ID,
-        "TABLE_ID": TABLE_ID,
-        "TABLE_NAME": TABLE_NAME,
+        "BQ_TABLE_ID": BQ_TABLE_ID,
+        "BQ_TABLE_NAME": BQ_TABLE_NAME,
         "LOG_LEVEL": LOG_LEVEL,
     }
     for name, value in constants.items():
