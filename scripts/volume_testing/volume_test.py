@@ -23,28 +23,29 @@ if env_path.exists():
     load_dotenv(dotenv_path=env_path)
 
 
-def get_env_var(
-    name: str,
+def check_constant(
+    const_name: str,
+    env_var: str,
+    logger_tool: logging.Logger,
     required: bool = True,
-    default: str | None = None,
-    logger_tool: logging.Logger | None = None,
-) -> str | None:
-    """Get an environment variable, log an error if it's required and not set."""
-    value = os.getenv(name, default)
-    if required and (value is None) and logger_tool:
-        logger_tool.error(f"Required environment variable {name} not set")
-    return value
+) -> bool:
+    """Check an environment variable, log an error if it's required and not set."""
+    if required and not env_var:
+        logger_tool.error(f"Required environment variable {const_name} not set")
+        raise OSError(f"Required environment variable {const_name} not set")
+    logger_tool.debug(f"Environment variable {const_name} set to {env_var}")
+    return True
 
 
 # Set up constants
-PROJECT_ID = get_env_var(name="PROJECT_ID", required=True)
-API_GATEWAY = get_env_var(name="API_GATEWAY", required=True)
-SA_EMAIL = get_env_var(name="SA_EMAIL", required=True)
+PROJECT_ID = os.getenv("PROJECT_ID", "")
+API_GATEWAY = os.getenv("API_GATEWAY", "")
+SA_EMAIL = os.getenv("SA_EMAIL", "")
 ENDPOINT = "/v1/survey-assist/classify"
-BQ_DATASET_ID = get_env_var(name="BQ_DATASET_ID", required=True)
-TABLE_ID = get_env_var(name="TABLE_ID", required=True)
+BQ_DATASET_ID = os.getenv("BQ_DATASET_ID", "")
+TABLE_ID = os.getenv("TABLE_ID", "")
 TABLE_NAME = f"{PROJECT_ID}.{BQ_DATASET_ID}.{TABLE_ID}"
-LOG_LEVEL = "DEBUG"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
 
 # Define schema
 schema = [
@@ -259,6 +260,19 @@ if __name__ == "__main__":
     parser = setup_parser()
     # set up the logger
     logger = setup_logger()
+    # check the constants
+    constants = {
+        "PROJECT_ID": PROJECT_ID,
+        "API_GATEWAY": API_GATEWAY,
+        "SA_EMAIL": SA_EMAIL,
+        "ENDPOINT": ENDPOINT,
+        "BQ_DATASET_ID": BQ_DATASET_ID,
+        "TABLE_ID": TABLE_ID,
+        "TABLE_NAME": TABLE_NAME,
+        "LOG_LEVEL": LOG_LEVEL,
+    }
+    for name, value in constants.items():
+        check_constant(name, value, logger, required=True)
     # parse the arguments
     arguments = parser.parse_args()
     # run the main function
