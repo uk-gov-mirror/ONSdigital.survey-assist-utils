@@ -85,7 +85,9 @@ def prepare_auth(api_gateway_url: str, sa_email: str, logger_tool: logging.Logge
     return auth_headers
 
 
-def prepare_payload(fake_data_csv: str, logger_tool: logging.Logger) -> dict:
+def prepare_payload(
+    fake_data_csv: str, logger_tool: logging.Logger, row: int | None = None
+) -> dict:
     """Reads a random line from a CSV and prepares the request payload."""
     try:
         logger_tool.debug(f"Reading fake responses csv file: '{fake_data_csv}'")
@@ -95,7 +97,9 @@ def prepare_payload(fake_data_csv: str, logger_tool: logging.Logger) -> dict:
         # The first line is the header
         line_count = len(lines)
         logger_tool.debug(f"Found {line_count} lines in '{fake_data_csv}'.")
-        chosen_row_index = random.randint(1, line_count - 1)  # noqa: S311
+        chosen_row_index = (
+            row if row else random.randint(1, line_count - 1)  # noqa: S311
+        )
         payload_data = lines[chosen_row_index].strip()
         logger_tool.debug(f"Selected line {chosen_row_index} for payload.")
         payload = {
@@ -203,7 +207,9 @@ def main(args, logger_tool):
     # wait until the specified sync time
     # Parse sync_time as UTC+0
     sync_time = datetime.datetime.strptime(args.test_sync_timestamp, "%H:%M:%S").time()
-    request_payload = prepare_payload("fake_data/fake_responses.csv", logger_tool)
+    request_payload = prepare_payload(
+        "fake_data/fake_responses.csv", logger_tool, args.userow
+    )
     request_headers = prepare_auth(API_GATEWAY, SA_EMAIL, logger_tool)
     now = datetime.datetime.now(datetime.timezone.utc)
     time_to_wait = (
@@ -251,6 +257,13 @@ def setup_parser():
         "test_sync_timestamp",
         type=str,
         help="The synchronization timestamp for the test (UTC+0), in HH:MM:SS format.",
+    )
+    _parser.add_argument(
+        "--userow",
+        "-r",
+        type=int,
+        default=None,
+        help="Specify the index of a particular row from the fake data CSV to use for the payload.",
     )
     return _parser
 
