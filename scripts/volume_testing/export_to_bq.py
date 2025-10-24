@@ -6,6 +6,21 @@ import pandas as pd
 import pandas_gbq as pgbq
 
 
+def confirm_bq_table_exists(
+    logger,
+    gcp_kwargs: dict,
+) -> None:
+    logger.info(f"Checking existence of table {gcp_kwargs['table_name']}")
+    try:
+        pgbq.read_gbq(
+            gcp_kwargs["table_name"], project_id=gcp_kwargs["project_id"], max_results=0
+        )
+        logger.info(f"Confirmed existence of table {gcp_kwargs['table_name']}")
+    except pgbq.exceptions.GenericGBQException as e:
+        logger.error(f"Table {gcp_kwargs['table_name']} not found: {e}")
+        raise
+
+
 def schema_entry(name: str, datatype: str, mode: str, description: str) -> dict:
     """Create a BigQuery schema entry."""
     return {

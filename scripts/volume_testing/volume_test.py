@@ -9,7 +9,7 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
-from export_to_bq import schema_entry, write_to_bq
+from export_to_bq import confirm_bq_table_exists, schema_entry, write_to_bq
 
 from survey_assist_utils.api_token.jwt_utils import (  # pylint: disable=C0411
     generate_jwt,
@@ -18,7 +18,6 @@ from survey_assist_utils.logging import (
     get_logger,
 )
 
-env_path = Path(__file__).resolve().parent.parent.parent / ".env"
 env_path = Path(__file__).resolve().parent.parent.parent / ".env"
 if env_path.exists():
     load_dotenv(dotenv_path=env_path)
@@ -47,6 +46,7 @@ BQ_DATASET_ID = os.getenv("BQ_DATASET_ID", "")
 BQ_TABLE_ID = os.getenv("BQ_TABLE_ID", "")
 BQ_TABLE_NAME = f"{PROJECT_ID}.{BQ_DATASET_ID}.{BQ_TABLE_ID}"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
+TIMEOUT = os.getenv("TIMEOUT", "60")
 
 # Define schema
 schema = [
@@ -145,7 +145,10 @@ def step_1(  # pylint: disable=R0917,R0913 # noqa: PLR0913
     start = time.time()
     try:
         response = requests.post(
-            f"{API_GATEWAY}{ENDPOINT}", json=payload, headers=headers, timeout=60
+            f"{API_GATEWAY}{ENDPOINT}",
+            json=payload,
+            headers=headers,
+            timeout=int(TIMEOUT),
         )
         try:
             response.raise_for_status()
@@ -301,9 +304,19 @@ if __name__ == "__main__":
         "BQ_TABLE_ID": BQ_TABLE_ID,
         "BQ_TABLE_NAME": BQ_TABLE_NAME,
         "LOG_LEVEL": LOG_LEVEL,
+        "TIMEOUT": TIMEOUT,
     }
     for name, value in constants.items():
         check_constant(name, value, logger, required=True)
+    # confirm the BigQuery table exists
+    confirm_bq_table_exists(
+        logger,
+        gcp_kwargs={
+            "project_id": PROJECT_ID,
+            "url": API_GATEWAY,
+            "table_name": BQ_TABLE_NAME,
+        },
+    )
     # parse the arguments
     arguments = parser.parse_args()
     # run the main function
