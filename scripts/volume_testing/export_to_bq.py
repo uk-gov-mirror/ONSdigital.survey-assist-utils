@@ -10,6 +10,7 @@ def confirm_bq_table_exists(
     logger,
     gcp_kwargs: dict,
 ) -> None:
+    """Confirm that the specified BigQuery table exists."""
     logger.info(f"Checking existence of table {gcp_kwargs['table_name']}")
     try:
         pgbq.read_gbq(
@@ -46,7 +47,7 @@ def _backoff(
                 logger.error(
                     f"Exceeded maximum attempts ({max_attempts}) for BigQuery write."
                 )
-            raise StopIteration(
+            raise StopIteration(  # pylint: disable=R1708
                 f"failed to write after maximum ({max_attempts}) attempts"
             )
         yield count, wait
