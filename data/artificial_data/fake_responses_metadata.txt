@@ -1,0 +1,3 @@
+The file "fake_responses.csv" was generated with Gemini, without knowledge of any real data, and contains no official or sensitive information.
+The fake_responses file should always be accompanied by this disclaimer/metadata file.
+LR 06/10/2025.
