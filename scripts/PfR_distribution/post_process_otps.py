@@ -44,7 +44,7 @@ def check_output_file_does_not_exist(bucket_url: str, logger) -> None:
 
     logger.info(f"Checking if output file already exists: {distribute_file_url}")
     try:
-        pd.read_csv(retain_file_url, nrows=0)
+        pd.read_csv(distribute_file_url, nrows=0)
         logger.error(f"Retain file {distribute_file_url} already exists.")
         raise FileExistsError(f"Retain file {distribute_file_url} already exists.")
     except FileNotFoundError:
