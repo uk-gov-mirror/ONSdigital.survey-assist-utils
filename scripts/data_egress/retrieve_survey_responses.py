@@ -5,9 +5,8 @@ into a CSV file.
 
 It processes the data in chunks to handle large datasets efficiently.
 """
-import collections.abc
 from argparse import ArgumentParser as AP
-from collections.abc import Generator
+from collections.abc import Generator, MutableMapping
 
 import pandas as pd
 from firebase_admin import firestore, initialize_app
@@ -40,7 +39,7 @@ def setup_parser() -> AP:
 
 
 def flatten_dict(
-    d: dict | collections.abc.MutableMapping, parent_key: str = "", sep: str = "_"
+    d: dict | MutableMapping, parent_key: str = "", sep: str = "_"
 ) -> dict:
     """Flattens a nested dictionary (or dict-like object).
 
@@ -59,7 +58,7 @@ def flatten_dict(
     for k, v in d.items():
         new_key = f"{parent_key}{sep}{k}" if parent_key else k
         # Handle item being a dictionary:
-        if isinstance(v, collections.abc.MutableMapping):
+        if isinstance(v, (MutableMapping, dict)):
             items.extend(flatten_dict(v, parent_key=new_key, sep=sep).items())
         # Handle item being a list:
         elif isinstance(v, (list, tuple)):
@@ -71,7 +70,7 @@ def flatten_dict(
                 for i, item in enumerate(v):
                     # Create a key for each list item - e.g. 'responses_0'
                     list_key = f"{new_key}{sep}{i}"
-                    if isinstance(item, collections.abc.MutableMapping):
+                    if isinstance(item, (MutableMapping, dict)):
                         items.extend(flatten_dict(item, list_key, sep=sep).items())
                     else:
                         # If the item in the list is not a dictionary, just save it with its index.
