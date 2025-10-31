@@ -99,7 +99,7 @@ def get_otps_from_gcp(
 def reformat_data(df: pd.DataFrame, logger) -> pd.DataFrame:
     """Reformats the OTPs DataFrame by replacing '-' with ' ' and renaming columns."""
     logger.info("Reformatting OTPs data.")
-    df["one_time_passcode"].replace("-", " ", inplace=True)
+    df["one_time_passcode"] = df["one_time_passcode"].str.replace("-", " ")
     df.rename(
         columns={
             "survey_access_id": "ONS Participant ID",
