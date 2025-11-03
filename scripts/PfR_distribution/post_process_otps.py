@@ -3,6 +3,7 @@
 rename columns and split into retain/distribute files.
 """
 from argparse import ArgumentParser as AP
+from argparse import ArgumentTypeError
 
 import pandas as pd
 from urllib3.exceptions import HTTPError
@@ -11,12 +12,27 @@ from survey_assist_utils.logging import get_logger
 
 LOG_LEVEL = "DEBUG"
 
+
+def positive_int(value):
+    """Converts input to positive integer or fails with descriptive error."""
+    try:
+        ivalue = int(value)
+    except ValueError as e:
+        raise ArgumentTypeError(f"{value} is not an integer") from e
+    if ivalue <= 0:
+        raise ArgumentTypeError(f"{value} is not a positive integer")
+    return ivalue
+
+
 parser = AP(description="Post-process OTPs to add missing columns and format data.")
 parser.add_argument(
     "gcp_bucket_url", type=str, help="GCP Bucket URL where the OTP CSV file is stored."
 )
 parser.add_argument(
-    "number_to_share", type=int, help="Number of OTPs to share with the PfR team."
+    "number_to_share",
+    type=positive_int,
+    help="Number of OTPs to share with the PfR team. A minimum of one OTP (STP0000) "
+    "will always be retained.",
 )
 parser.add_argument(
     "--overwrite",
@@ -75,10 +91,11 @@ def get_otps_from_gcp(
     if len(df) == 0:
         logger.error("No OTPs found in the provided GCP Bucket URL.")
         raise ValueError("No OTPs found.")
-    if len(df) < number_to_share:
+    if len(df) <= number_to_share:
         logger.error(
             f"Requested number of OTPs to share ({number_to_share}) "
-            f"exceeds available OTPs ({len(df)})."
+            f"exceeds or matches the number of available OTPs ({len(df)}). "
+            f"Note that a minimum of one OTP (STP0000) will always be retained."
         )
         raise ValueError("Insufficient OTPs available.")
     logger.info(f"Successfully read {len(df)} OTPs.")

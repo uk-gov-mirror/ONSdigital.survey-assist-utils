@@ -18,7 +18,7 @@ Positional arguments:
 
   `gcp_bucket_url`  - GCP Bucket URL where the OTP CSV file is stored.
 
-  `number_to_share` - Number of OTPs to share with the PfR team.
+  `number_to_share` - Number of OTPs to share with the PfR team. A minimum of one OTP (STP0000) will always be retained.
 
 Options:
 
