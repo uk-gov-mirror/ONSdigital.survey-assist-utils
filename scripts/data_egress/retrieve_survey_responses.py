@@ -5,11 +5,25 @@ into a CSV file.
 
 It processes the data in chunks to handle large datasets efficiently.
 """
+import os
 from argparse import ArgumentParser as AP
 from collections.abc import Generator, MutableMapping
+from datetime import datetime
 
 import pandas as pd
 from firebase_admin import firestore, initialize_app
+
+from survey_assist_utils.logging import (
+    get_logger,
+)
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
+
+
+def setup_logger():
+    """Set up the logger."""
+    logger_tool = get_logger("data_egress", level=LOG_LEVEL.upper())
+    return logger_tool
 
 
 def setup_parser() -> AP:
@@ -36,6 +50,39 @@ def setup_parser() -> AP:
         help="The number of documents to process in each chunk.",
     )
     return parser
+
+
+def apply_custom_adjustments_results(flattened_dict: dict | MutableMapping):
+    """Reformats flattened dictionaries based on patterns, targeted towards
+    the survey_response collection.
+    """
+    # Handle removing 'responses_0' prefix as there are never multiple responses.
+    for key in list(flattened_dict.keys()):
+        if key.startswith("responses_0_"):
+            flattened_dict[f"{key.removeprefix('responses_0_')}"] = flattened_dict[key]
+            del flattened_dict[key]
+
+    for key in list(flattened_dict.keys()):
+        # Handle deletion of dict items as we go
+        if key not in flattened_dict:
+            continue
+        # Reformat datetime objects as human- and machine-readable strings.
+        if isinstance(flattened_dict[key], datetime):
+            flattened_dict[key] = flattened_dict[key].strftime("%Y_%m_%d__%H_%M_%S_%f")
+        # We're only doing SIC at the moment, so we don't need these fields.
+        if key.endswith("flavour"):
+            del flattened_dict[key]
+        # Restructure 'field: <name>, value: <val>' patterns to 'fieldname: value' pattern.
+        if key.endswith("field"):
+            attribute_base = key.removesuffix("field")
+            attribute_name = flattened_dict[key]
+            attribute_value = f"{attribute_base}value"
+            flattened_dict[f"{attribute_base}{attribute_name}"] = flattened_dict[
+                attribute_value
+            ]
+            del flattened_dict[key]
+            del flattened_dict[attribute_value]
+    return flattened_dict
 
 
 def flatten_dict(
@@ -84,6 +131,7 @@ def flatten_dict(
 def connect_to_firestore(
     project_id: str,
     database_id: str,
+    logger_tool,
     collection_name: str = "survey_results",
     timeout: int | float = 5,
 ):
@@ -92,6 +140,7 @@ def connect_to_firestore(
     Args:
         project_id (str): The Google Cloud project ID.
         database_id (str): The Firestore database ID.
+        logger_tool: The logger tool.
         collection_name (str): The name of the Firestore collection.
             Defaults to 'survey_results'.
         timeout (int | float): The HTTP timeout in seconds for the connection.
@@ -107,6 +156,7 @@ def connect_to_firestore(
             specified collection is not found.
     """
     if timeout <= 0:
+        logger_tool.error("`timeout` must be positive and non-zero.")
         raise ValueError("`timeout` must be positive and non-zero.")
 
     # Initialize Firestore connection
@@ -114,17 +164,23 @@ def connect_to_firestore(
         "projectId": project_id,
         "httpTimeout": timeout,
     }
+    logger_tool.debug("Connecting to Firestore...")
     app = initialize_app(options=app_options)
     db = firestore.client(app=app, database_id=database_id)
+    logger_tool.debug("Firestore client link established.")
 
     # non-intrusive test to verify connection
+    logger_tool.debug("Testing connection to Firestore...")
     try:
         if collection_name not in [collection.id for collection in db.collections()]:
+            logger_tool.error(f"'{collection_name}' collection not found.")
             raise ValueError(
                 f"'{collection_name}' collection not found, or not accessible."
             )
     except Exception as e:
+        logger_tool.error(f"Error when connecting to Firestore: {e}")
         raise ConnectionError(f"Error when connecting to Firestore: {e}") from e
+    logger_tool.debug("Connection to Firestore successful.")
     return db.collection(collection_name)
 
 
@@ -167,15 +223,38 @@ def chunker(db_collection, chunk_size: int = 1000) -> Generator[list[dict], None
             break
 
         last_doc = docs[-1]
-        yield [flatten_dict({"id": doc.id} | doc.to_dict()) for doc in docs]
+        flattened_dicts = [flatten_dict({"id": doc.id} | doc.to_dict()) for doc in docs]
+        yield [
+            apply_custom_adjustments_results(flattened_dict)
+            for flattened_dict in flattened_dicts
+        ]
 
 
-def process_and_save_survey_results(
+def prepare_output_directory(output_base: str, gcp: bool = False):
+    """Creates the (local) output directory if it doesn't exist.
+
+    Args:
+        output_base (str): The base name of the output CSV file.
+        gcp (bool): Whether a GCP Bucket is used for output storage.
+    """
+    # If we're using local storage, we need to ensure directories exist before we write files within
+    # them.
+    # If we're using a GCP Bucket, the directories will be created automatically if needed.
+    if not gcp:
+        os.makedirs(
+            os.path.dirname(f"{output_base}_intermediate_files/"), exist_ok=True
+        )
+
+
+def process_and_save_survey_results(  # noqa: PLR0913 # pylint: disable=R0913,R0917,R0914
     project_id: str,
     database_id: str,
+    logger_tool,
     collection_name: str = "survey_results",
-    output_name: str = "survey_results.csv",
+    output_base: str = "survey_results",
     timeout: int | float = 30,
+    chunk_size: int = 1000,
+    gcp: bool = False,
 ) -> None:
     """Connects to Firestore, processes survey results, and saves them to a CSV.
 
@@ -185,28 +264,118 @@ def process_and_save_survey_results(
     Args:
         project_id (str): The Google Cloud project ID.
         database_id (str): The Firestore database ID.
+        logger_tool: The logger tool.
         collection_name (str): The name of the Firestore collection to process.
-        output_name (str): The name of the output CSV file.
+        output_base (str): The name of the output CSV file (without .csv extension).
+        chunk_size (int): The number of documents to process in each chunk.
         timeout (int): The connection timeout in seconds.
+        gcp (bool): Whether a GCP Bucket is used for output storage.
     """
+    logger_tool.debug("Attempting to retrieve collection information from Firestore...")
     survey_results_collection = connect_to_firestore(
-        project_id, database_id, collection_name, timeout
+        project_id, database_id, logger_tool, collection_name, timeout
     )
-    for chunk_id, results_chunk in enumerate(chunker(survey_results_collection)):
+    logger_tool.debug("Collection information retrieved from Firestore successfully.")
+    logger_tool.debug("Beggining to process survey outputs in batches...")
+    total_chunks = 0
+    for chunk_id, results_chunk in enumerate(
+        chunker(survey_results_collection, chunk_size)
+    ):
+        logger_tool.debug(f"Processing batch {chunk_id}...")
+        total_chunks += 1
         df = pd.DataFrame(results_chunk)
+        logger_tool.debug(f"Batch {chunk_id} loaded into DataFrame.")
         if chunk_id == 0:
-            df.to_csv(output_name, index=False)
+            # Create an initial 'intermediate output' csv file to store the chunks of processed data
+            logger_tool.debug(
+                f"Saving processed batch {chunk_id} to intermediate file..."
+            )
+            df.to_csv(
+                f"{output_base}_intermediate_files/chunk_{chunk_id}.csv",
+                index=False,
+            )
+            logger_tool.debug(f"Saved processed batch {chunk_id} to intermediate file.")
         else:
-            df.to_csv(output_name, index=False, mode="a", header=False)
+            logger_tool.debug(
+                f"Saving processed batch {chunk_id} to intermediate file..."
+            )
+            logger_tool.debug(
+                "Adding any columns from previous batches missing in current batch..."
+            )
+            # Load *zero rows* from the previous chunk and merge with current,
+            # to make sure we keep the Union of (flattened) columns from each
+            last_most_recent_chunk_structure_df = pd.read_csv(
+                f"{output_base}_intermediate_files/chunk_{chunk_id-1}.csv", nrows=0
+            )
+            df = pd.concat([last_most_recent_chunk_structure_df, df], ignore_index=True)
+            df.to_csv(
+                f"{output_base}_intermediate_files/chunk_{chunk_id}.csv",
+                index=False,
+            )
+            logger_tool.debug(f"Saved processed batch {chunk_id} to intermediate file.")
+
+    # With GCP Bucket storage, stored objects are immutable - so we *must* hold all in memory
+    # to write the final output file.
+    # If this fails, the intermediate files can still be used to construct the final file on
+    # some computer with more memory.
+    if gcp:
+        logger_tool.debug(
+            "Beginning to collate intermediate files into final output file in GCP Bucket..."
+        )
+        collated_output_df = pd.read_csv(
+            f"{output_base}_intermediate_files/chunk_{total_chunks-1}.csv", nrows=0
+        )
+        for chunk_id in range(total_chunks):
+            current_chunk_df = pd.read_csv(
+                f"{output_base}_intermediate_files/chunk_{chunk_id}.csv"
+            )
+            collated_output_df = pd.concat(
+                [collated_output_df, current_chunk_df], ignore_index=True
+            )
+        collated_output_df.to_csv(f"{output_base}.csv", index=False)
+        logger_tool.debug(
+            "Collated intermediate files into final output file in GCP Bucket."
+        )
+
+    # With local storage, we can append to the final output CSV file
+    # (ensure we don't hit a MemoryException, regardless of how many responses we have to deal with)
+    else:
+        logger_tool.debug(
+            "Beginning to collate intermediate files into final output file locally..."
+        )
+        for chunk_id in range(total_chunks):
+            final_chunk_structure_df = pd.read_csv(
+                f"{output_base}_intermediate_files/chunk_{total_chunks-1}.csv",
+                nrows=0,
+            )
+            current_chunk_df = pd.read_csv(
+                f"{output_base}_intermediate_files/chunk_{chunk_id}.csv"
+            )
+            current_chunk_df = pd.concat(
+                [final_chunk_structure_df, current_chunk_df], ignore_index=True
+            )
+            current_chunk_df.to_csv(
+                f"{output_base}.csv", index=False, mode="a", header=not chunk_id
+            )
+        logger_tool.debug(
+            "Finished collating intermediate files into final output file locally."
+        )
 
 
 if __name__ == "__main__":
     cli_parser = setup_parser()
     args = cli_parser.parse_args()
+    logger = setup_logger()
+    use_gcp_storage = args.output_name.startswith("gs://")
+    output_name_base = args.output_name.removesuffix(".csv")
+    prepare_output_directory(output_name_base, use_gcp_storage)
     process_and_save_survey_results(
         args.project_id,
         args.database_id,
+        logger,
         args.collection_name,
-        args.output_name,
+        output_name_base,
         args.timeout,
+        args.chunk_size,
+        use_gcp_storage,
     )
